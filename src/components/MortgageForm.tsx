@@ -158,7 +158,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               Mortgage Details
             </Typography>
             
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
               <Controller
                 name="mortgage_amount"
                 control={control}
@@ -260,7 +260,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   <TextField
                     {...field}
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Max Payment After Fixed (£)"
+                    label="Max Payment (£)"
                     type="number"
                     error={!!errors.max_payment_after_fixed}
                     helperText={errors.max_payment_after_fixed?.message || 'Optional'}
@@ -280,7 +280,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               Savings Details
             </Typography>
             
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
               <Controller
                 name="initial_balance"
                 control={control}
@@ -307,7 +307,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   <TextField
                     {...field}
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Monthly Contribution (£)"
+                    label="Monthly Savings (£)"
                     type="number"
                     error={!!errors.monthly_contribution}
                     helperText={errors.monthly_contribution?.message}
@@ -347,7 +347,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               Simulation Settings
             </Typography>
             
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
               <Controller
                 name="typical_payment"
                 control={control}
@@ -355,7 +355,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   <TextField
                     {...field}
                     onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Typical Payment (£)"
+                    label="Monthly Payment (£)"
                     type="number"
                     error={!!errors.typical_payment}
                     helperText={errors.typical_payment?.message}
