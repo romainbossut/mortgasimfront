@@ -149,6 +149,9 @@ export function encodeFormDataToUrl(data: MortgageFormData): string {
  * Decode complete form data from URL parameters
  */
 export function decodeFormDataFromUrl(searchParams: URLSearchParams): Partial<MortgageFormData> {
+  console.log('decodeFormDataFromUrl called with searchParams:', searchParams)
+  console.log('All search params:', Array.from(searchParams.entries()))
+  
   const data: Partial<MortgageFormData> = {};
   
   // Helper function to parse number with validation
@@ -178,8 +181,14 @@ export function decodeFormDataFromUrl(searchParams: URLSearchParams): Partial<Mo
   }
   
   data.mortgage_amount = parseNumber(searchParams.get('mortgage_amount'), 1000, 10000000);
+  console.log('Parsed mortgage_amount:', data.mortgage_amount, 'from:', searchParams.get('mortgage_amount'))
+  
   data.term_years = parseInteger(searchParams.get('term_years'), 1, 40);
+  console.log('Parsed term_years:', data.term_years, 'from:', searchParams.get('term_years'))
+  
   data.fixed_rate = parseNumber(searchParams.get('fixed_rate'), 0, 15);
+  console.log('Parsed fixed_rate:', data.fixed_rate, 'from:', searchParams.get('fixed_rate'))
+  
   data.fixed_term_months = parseInteger(searchParams.get('fixed_term_months'), 0);
   data.variable_rate = parseNumber(searchParams.get('variable_rate'), 0, 15);
   data.max_payment_after_fixed = parseNumber(searchParams.get('max_payment_after_fixed'), 0);
@@ -232,9 +241,12 @@ export function decodeFormDataFromUrl(searchParams: URLSearchParams): Partial<Mo
   }
   
   // Filter out undefined values
-  return Object.fromEntries(
+  const filteredData = Object.fromEntries(
     Object.entries(data).filter(([, value]) => value !== undefined)
   ) as Partial<MortgageFormData>;
+  
+  console.log('Final decoded form data:', filteredData)
+  return filteredData;
 }
 
 /**

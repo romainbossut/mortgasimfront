@@ -59,10 +59,17 @@ export const DynamicMortgagePage: React.FC = () => {
 
   // Parse URL parameters - first try comprehensive URL decoding, fallback to legacy parsing
   const urlParams = useMemo(() => {
+    console.log('=== URL PARSING START ===')
+    console.log('Current URL:', window.location.href)
+    console.log('SearchParams object:', searchParams)
+    console.log('SearchParams toString:', searchParams.toString())
+    console.log('Slug:', slug)
+    
     // Try comprehensive URL parameter decoding first
     const comprehensiveParams = decodeFormDataFromUrl(searchParams)
     console.log('Comprehensive params:', comprehensiveParams)
     if (Object.keys(comprehensiveParams).length > 0) {
+      console.log('Using comprehensive params')
       return comprehensiveParams
     }
     
@@ -71,27 +78,32 @@ export const DynamicMortgagePage: React.FC = () => {
       const legacyParams = parseMortgageSlug(slug)
       console.log('Legacy slug params:', legacyParams)
       if (legacyParams) {
-        return {
+        const converted = {
           mortgage_amount: legacyParams.loan,
           term_years: legacyParams.term,
           fixed_rate: legacyParams.rate,
           variable_rate: legacyParams.rate,
         }
+        console.log('Using legacy slug params:', converted)
+        return converted
       }
     } else {
       const legacyParams = parseMortgageQuery(searchParams)
       console.log('Legacy query params:', legacyParams)
       if (Object.keys(legacyParams).length > 0) {
-        return {
+        const converted = {
           mortgage_amount: legacyParams.loan,
           term_years: legacyParams.term,
           fixed_rate: legacyParams.rate,
           variable_rate: legacyParams.rate,
         }
+        console.log('Using legacy query params:', converted)
+        return converted
       }
     }
     
     console.log('No URL params found, returning empty object')
+    console.log('=== URL PARSING END ===')
     return {}
   }, [slug, searchParams])
 
@@ -109,21 +121,31 @@ export const DynamicMortgagePage: React.FC = () => {
     }
   }, [urlParams, slug])
 
+  // Check if we have actual URL parameters (not empty object)
+  const hasUrlParams = urlParams && Object.keys(urlParams).length > 0
+
   // Generate pre-filled form data
   const preFilledFormData = useMemo(() => {
     console.log('URL params for form:', urlParams)
-    if (!urlParams || Object.keys(urlParams).length === 0) {
-      console.log('Using default form values')
+    console.log('Has URL params:', hasUrlParams)
+    
+    if (!hasUrlParams) {
+      console.log('No URL params - using default form values')
       return defaultFormValues
     }
 
+    // Filter out undefined values before merging
+    const filteredUrlParams = Object.fromEntries(
+      Object.entries(urlParams).filter(([, value]) => value !== undefined)
+    )
+
     const merged = {
       ...defaultFormValues,
-      ...urlParams,
+      ...filteredUrlParams,
     }
-    console.log('Pre-filled form data:', merged)
+    console.log('Pre-filled form data with URL params:', merged)
     return merged
-  }, [urlParams])
+  }, [urlParams, hasUrlParams])
 
   // SEO metadata
   const seoData = useMemo(() => {
@@ -450,7 +472,7 @@ export const DynamicMortgagePage: React.FC = () => {
             <MortgageForm
               onSubmit={handleFormSubmit}
               isLoading={simulationMutation.isPending}
-              initialValues={preFilledFormData}
+              initialValues={hasUrlParams ? preFilledFormData : undefined}
             />
           </Box>
 

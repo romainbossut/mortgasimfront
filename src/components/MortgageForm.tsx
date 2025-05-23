@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -46,8 +46,10 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   isLoading = false,
   initialValues,
 }) => {
-  // Use initialValues if provided, otherwise use defaults
-  const formValues = initialValues ? { ...defaultFormValues, ...initialValues } : defaultFormValues
+  // Use initialValues if provided (from URL), otherwise use defaults
+  console.log('MortgageForm received initialValues:', initialValues)
+  const formValues = initialValues || defaultFormValues
+  console.log('MortgageForm using formValues:', formValues)
   
   const [lastSimulatedValues, setLastSimulatedValues] = useState<MortgageFormData | null>(null)
   const [shareSnackbar, setShareSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -56,16 +58,28 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
     severity: 'success'
   })
 
+  console.log('useForm defaultValues:', formValues)
+  
   const {
     control,
     handleSubmit,
     formState: { errors },
     watch,
     setValue,
+    reset,
   } = useForm<MortgageFormData>({
     resolver: zodResolver(mortgageFormSchema) as any,
     defaultValues: formValues,
   })
+
+  // Reset form when initialValues change (e.g., from URL parameters)
+  useEffect(() => {
+    if (initialValues && Object.keys(initialValues).length > 0) {
+      // initialValues is already merged with defaults in DynamicMortgagePage
+      console.log('Resetting form with initialValues:', initialValues)
+      reset(initialValues)
+    }
+  }, [initialValues, reset])
 
   // Use field array for custom overpayments
   const { fields, append, remove } = useFieldArray({
