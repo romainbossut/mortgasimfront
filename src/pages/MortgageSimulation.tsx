@@ -1,0 +1,332 @@
+import React, { useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+  Box,
+  Container,
+  Typography,
+  Chip,
+  Button,
+  Alert,
+  CircularProgress,
+  Card,
+  CardContent,
+  Paper,
+} from '@mui/material'
+import {
+  CheckCircle,
+  Error,
+  Warning,
+  FileDownload,
+  CloudOff,
+  TrendingUp,
+} from '@mui/icons-material'
+import { MortgageForm } from '../components/MortgageForm'
+import { MortgageCharts } from '../components/MortgageCharts'
+import { MortgageApiService, transformFormDataToRequest } from '../services/mortgageApi'
+import type { MortgageFormData } from '../utils/validation'
+import type { SimulationResponse, SimulationRequest } from '../types/mortgage'
+
+export const MortgageSimulation: React.FC = () => {
+  const [simulationResults, setSimulationResults] = useState<SimulationResponse | null>(null)
+  const [warnings, setWarnings] = useState<string[]>([])
+  const [currentStartDate, setCurrentStartDate] = useState<string>('')
+  const [lastSimulationRequest, setLastSimulationRequest] = useState<SimulationRequest | null>(null)
+
+  // Mutation for running simulation
+  const simulationMutation = useMutation({
+    mutationFn: MortgageApiService.simulate,
+    onSuccess: (data) => {
+      setSimulationResults(data)
+      setWarnings(data.warnings || [])
+    },
+    onError: (error) => {
+      console.error('Simulation failed:', error)
+    },
+  })
+
+  // Query for getting sample data
+  const sampleQuery = useQuery({
+    queryKey: ['sample-request'],
+    queryFn: MortgageApiService.getSampleRequest,
+    enabled: false, // Only run when explicitly called
+  })
+
+  // Health check query
+  const healthQuery = useQuery({
+    queryKey: ['health'],
+    queryFn: MortgageApiService.healthCheck,
+    retry: 3,
+    refetchInterval: 300000, // 5 minutes
+  })
+
+  const handleFormSubmit = (formData: MortgageFormData) => {
+    setCurrentStartDate(formData.start_date) // Store the start date
+    const request = transformFormDataToRequest(formData)
+    setLastSimulationRequest(request) // Store the request for CSV export
+    simulationMutation.mutate(request)
+  }
+
+  const handleLoadSample = async () => {
+    try {
+      const sampleData = await sampleQuery.refetch()
+      if (sampleData.data) {
+        // Set a default start date for sample data
+        const today = new Date().toISOString().split('T')[0]
+        setCurrentStartDate(today)
+        setLastSimulationRequest(sampleData.data)
+        simulationMutation.mutate(sampleData.data)
+      }
+    } catch (error) {
+      console.error('Failed to load sample:', error)
+    }
+  }
+
+  const handleExportCsv = async () => {
+    if (!simulationResults || !lastSimulationRequest) return
+    
+    try {
+      const csvBlob = await MortgageApiService.exportCsv(lastSimulationRequest)
+      
+      // Create download link
+      const url = window.URL.createObjectURL(csvBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `mortgage-simulation-${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Failed to export CSV:', error)
+    }
+  }
+
+  const getApiStatusChip = () => {
+    if (healthQuery.isLoading) {
+      return (
+        <Chip
+          icon={<CircularProgress size={14} />}
+          label="Checking API..."
+          color="warning"
+          variant="outlined"
+          size="small"
+          sx={{ fontSize: '0.75rem' }}
+        />
+      )
+    }
+    
+    if (healthQuery.isError) {
+      return (
+        <Chip
+          icon={<CloudOff sx={{ fontSize: 14 }} />}
+          label="API Offline"
+          color="error"
+          variant="outlined"
+          size="small"
+          sx={{ fontSize: '0.75rem' }}
+        />
+      )
+    }
+    
+    return (
+      <Chip
+        icon={<CheckCircle sx={{ fontSize: 14 }} />}
+        label="API Online"
+        color="success"
+        variant="outlined"
+        size="small"
+        sx={{ fontSize: '0.75rem' }}
+      />
+    )
+  }
+
+  return (
+    <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
+      {/* Subtle Header */}
+      <Paper 
+        elevation={0} 
+        sx={{ 
+          backgroundColor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          py: 2
+        }}
+      >
+        <Container maxWidth="xl">
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box>
+              <Typography variant="h6" fontWeight={500} color="text.primary">
+                Mortgage Simulation
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Simulate mortgage payments, savings growth, and net worth over time
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              {getApiStatusChip()}
+            </Box>
+          </Box>
+        </Container>
+      </Paper>
+
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        {/* Warnings */}
+        {warnings.length > 0 && (
+          <Alert 
+            severity="warning" 
+            icon={<Warning />}
+            sx={{ mb: 3 }}
+            elevation={1}
+          >
+            <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
+              Simulation Warnings
+            </Typography>
+            <Box component="ul" sx={{ m: 0, pl: 2 }}>
+              {warnings.map((warning, index) => (
+                <Typography component="li" variant="body2" key={index}>
+                  {warning}
+                </Typography>
+              ))}
+            </Box>
+          </Alert>
+        )}
+
+        {/* Error Display */}
+        {simulationMutation.isError && (
+          <Alert 
+            severity="error" 
+            icon={<Error />}
+            sx={{ mb: 3 }}
+            elevation={1}
+          >
+            <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
+              Simulation Error
+            </Typography>
+            <Typography variant="body2">
+              {simulationMutation.error instanceof Error
+                ? simulationMutation.error.message
+                : 'An unexpected error occurred. Please try again.'}
+            </Typography>
+          </Alert>
+        )}
+
+        <Box 
+          sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', lg: 'row' }, 
+            gap: 4 
+          }}
+        >
+          {/* Form Section */}
+          <Box sx={{ flex: { xs: '1', lg: '0 0 420px' } }}>
+            <MortgageForm
+              onSubmit={handleFormSubmit}
+              isLoading={simulationMutation.isPending}
+              onLoadSample={handleLoadSample}
+            />
+          </Box>
+
+          {/* Results Section */}
+          <Box sx={{ flex: 1 }}>
+            {simulationMutation.isPending && (
+              <Card elevation={3}>
+                <CardContent>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: 400,
+                      textAlign: 'center',
+                      py: 8,
+                    }}
+                  >
+                    <CircularProgress size={60} sx={{ mb: 3 }} />
+                    <Typography variant="h5" gutterBottom>
+                      Running simulation...
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary">
+                      This may take a few seconds depending on the complexity of your scenario.
+                    </Typography>
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
+
+            {simulationResults && !simulationMutation.isPending && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {/* Export Button */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    onClick={handleExportCsv}
+                    startIcon={<FileDownload />}
+                    variant="outlined"
+                    size="small"
+                    sx={{ 
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.50',
+                        borderColor: 'primary.dark',
+                      }
+                    }}
+                  >
+                    Export CSV
+                  </Button>
+                </Box>
+                
+                {/* Charts */}
+                <MortgageCharts
+                  chartData={simulationResults.chart_data}
+                  summaryStats={simulationResults.summary_statistics}
+                  startDate={currentStartDate}
+                  isLoading={false}
+                />
+              </Box>
+            )}
+
+            {!simulationResults && !simulationMutation.isPending && (
+              <Card elevation={3}>
+                <CardContent>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minHeight: 400,
+                      textAlign: 'center',
+                      py: 8,
+                    }}
+                  >
+                    <TrendingUp sx={{ fontSize: '4rem', mb: 2, color: 'primary.main' }} />
+                    <Typography variant="h4" gutterBottom fontWeight={600}>
+                      Ready to simulate!
+                    </Typography>
+                    <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500 }}>
+                      Fill in the mortgage parameters on the left and click "Run Simulation" to see your
+                      personalized mortgage and savings projections.
+                    </Typography>
+                    <Box sx={{ 
+                      p: 3, 
+                      backgroundColor: 'rgba(25, 118, 210, 0.05)', 
+                      borderRadius: 2,
+                      border: '1px solid',
+                      borderColor: 'rgba(25, 118, 210, 0.2)'
+                    }}>
+                      <Typography variant="body2" color="primary.main" fontWeight="medium">
+                        💡 <strong>Tip:</strong> Try clicking "Load Sample" for a quick demo
+                      </Typography>
+                    </Box>
+                  </Box>
+                </CardContent>
+              </Card>
+            )}
+          </Box>
+        </Box>
+      </Container>
+    </Box>
+  )
+} 
