@@ -114,11 +114,11 @@ Each generated landing page includes:
 ## Example Generated URLs
 
 ```
-https://mortgasim.com/mortgage/200k-over-25-years-at-4-percent
-https://mortgasim.com/mortgage/250k-over-30-years-at-5-percent
-https://mortgasim.com/mortgage/300k-over-25-years-at-4.5-percent
-https://mortgasim.com/mortgage/400k-over-20-years-at-3.5-percent
-https://mortgasim.com/mortgage/500k-over-35-years-at-6-percent
+https://www.mortgasim.com/mortgage/200k-over-25-years-at-4-percent
+https://www.mortgasim.com/mortgage/250k-over-30-years-at-5-percent
+https://www.mortgasim.com/mortgage/300k-over-25-years-at-4.5-percent
+https://www.mortgasim.com/mortgage/400k-over-20-years-at-3.5-percent
+https://www.mortgasim.com/mortgage/500k-over-35-years-at-6-percent
 ```
 
 ## Customization

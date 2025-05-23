@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://mortgasim.com/sitemap.xml
+Sitemap: https://www.mortgasim.com/sitemap.xml
 
 # Crawl-delay
 Crawl-delay: 1

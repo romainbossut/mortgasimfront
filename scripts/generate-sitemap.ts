@@ -15,7 +15,7 @@ class SitemapGenerator {
   private baseUrl: string;
   private outputDir: string;
 
-  constructor(baseUrl: string = 'https://mortgasim.com', outputDir: string = './public') {
+  constructor(baseUrl: string = 'https://www.mortgasim.com', outputDir: string = './public') {
     this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
     this.outputDir = outputDir;
   }
@@ -182,7 +182,7 @@ Crawl-delay: 1`;
 function main() {
   const args = process.argv.slice(2);
   const command = args[0] || 'all';
-  const baseUrl = args[1] || 'https://mortgasim.com';
+  const baseUrl = args[1] || 'https://www.mortgasim.com';
   const outputDir = args[2] || './public';
 
   const generator = new SitemapGenerator(baseUrl, outputDir);
