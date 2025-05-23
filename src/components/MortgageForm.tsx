@@ -16,7 +16,6 @@ import {
   Savings,
   Settings,
   Refresh,
-  PlayArrow,
   CalendarToday,
 } from '@mui/icons-material'
 import { mortgageFormSchema, defaultFormValues } from '../utils/validation'
@@ -25,13 +24,11 @@ import type { MortgageFormData } from '../utils/validation'
 interface MortgageFormProps {
   onSubmit: (data: MortgageFormData) => void
   isLoading?: boolean
-  onLoadSample?: () => void
 }
 
 export const MortgageForm: React.FC<MortgageFormProps> = ({
   onSubmit,
   isLoading = false,
-  onLoadSample,
 }) => {
   const {
     control,
@@ -42,12 +39,6 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
     resolver: zodResolver(mortgageFormSchema),
     defaultValues: defaultFormValues,
   })
-
-  const handleLoadSample = () => {
-    if (onLoadSample) {
-      onLoadSample()
-    }
-  }
 
   const handleReset = () => {
     reset(defaultFormValues)
@@ -62,36 +53,6 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
             Mortgage Simulation Parameters
           </Typography>
           <Box sx={{ display: 'flex', gap: 1.5 }}>
-            {onLoadSample && (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleLoadSample}
-                disabled={isLoading}
-                startIcon={<PlayArrow sx={{ fontSize: '1rem' }} />}
-                sx={{
-                  minWidth: 130,
-                  height: 36,
-                  px: 2,
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  borderColor: 'primary.main',
-                  color: 'primary.main',
-                  textTransform: 'none',
-                  whiteSpace: 'nowrap',
-                  '&:hover': {
-                    borderColor: 'primary.dark',
-                    backgroundColor: 'rgba(25, 118, 210, 0.04)',
-                  },
-                  '& .MuiButton-startIcon': {
-                    marginLeft: 0,
-                    marginRight: '8px',
-                  },
-                }}
-              >
-                Load Sample
-              </Button>
-            )}
             <Button
               variant="outlined"
               size="small"

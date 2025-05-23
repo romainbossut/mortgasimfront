@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import {
   Box,
@@ -31,6 +31,7 @@ export const MortgageSimulation: React.FC = () => {
   const [warnings, setWarnings] = useState<string[]>([])
   const [currentStartDate, setCurrentStartDate] = useState<string>('')
   const [lastSimulationRequest, setLastSimulationRequest] = useState<SimulationRequest | null>(null)
+  const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
 
   // Mutation for running simulation
   const simulationMutation = useMutation({
@@ -59,26 +60,34 @@ export const MortgageSimulation: React.FC = () => {
     refetchInterval: 300000, // 5 minutes
   })
 
+  // Auto-load sample data on component mount
+  useEffect(() => {
+    const loadSampleData = async () => {
+      if (!hasAutoLoaded) {
+        try {
+          const sampleData = await sampleQuery.refetch()
+          if (sampleData.data) {
+            // Set a default start date for sample data
+            const today = new Date().toISOString().split('T')[0]
+            setCurrentStartDate(today)
+            setLastSimulationRequest(sampleData.data)
+            simulationMutation.mutate(sampleData.data)
+            setHasAutoLoaded(true)
+          }
+        } catch (error) {
+          console.error('Failed to auto-load sample:', error)
+        }
+      }
+    }
+
+    loadSampleData()
+  }, [hasAutoLoaded, sampleQuery, simulationMutation])
+
   const handleFormSubmit = (formData: MortgageFormData) => {
     setCurrentStartDate(formData.start_date) // Store the start date
     const request = transformFormDataToRequest(formData)
     setLastSimulationRequest(request) // Store the request for CSV export
     simulationMutation.mutate(request)
-  }
-
-  const handleLoadSample = async () => {
-    try {
-      const sampleData = await sampleQuery.refetch()
-      if (sampleData.data) {
-        // Set a default start date for sample data
-        const today = new Date().toISOString().split('T')[0]
-        setCurrentStartDate(today)
-        setLastSimulationRequest(sampleData.data)
-        simulationMutation.mutate(sampleData.data)
-      }
-    } catch (error) {
-      console.error('Failed to load sample:', error)
-    }
   }
 
   const handleExportCsv = async () => {
@@ -202,7 +211,6 @@ export const MortgageSimulation: React.FC = () => {
             <MortgageForm
               onSubmit={handleFormSubmit}
               isLoading={simulationMutation.isPending}
-              onLoadSample={handleLoadSample}
             />
           </Box>
 
@@ -283,11 +291,11 @@ export const MortgageSimulation: React.FC = () => {
                   >
                     <TrendingUp sx={{ fontSize: '4rem', mb: 2, color: 'primary.main' }} />
                     <Typography variant="h4" gutterBottom fontWeight={600}>
-                      Ready to simulate!
+                      Loading sample simulation...
                     </Typography>
                     <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500 }}>
-                      Fill in the mortgage parameters on the left and click "Run Simulation" to see your
-                      personalized mortgage and savings projections.
+                      We're automatically loading a sample mortgage simulation to show you how the tool works. 
+                      You can modify the parameters on the left to run your own simulation.
                     </Typography>
                     <Box sx={{ 
                       p: 3, 
@@ -297,7 +305,7 @@ export const MortgageSimulation: React.FC = () => {
                       borderColor: 'rgba(25, 118, 210, 0.2)'
                     }}>
                       <Typography variant="body2" color="primary.main" fontWeight="medium">
-                        💡 <strong>Tip:</strong> Try clicking "Load Sample" for a quick demo
+                        💡 <strong>Tip:</strong> Adjust any parameter and click "Run Simulation" to see your personalized results
                       </Typography>
                     </Box>
                   </Box>
