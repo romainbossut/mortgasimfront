@@ -32,12 +32,12 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   initialValues,
 }) => {
   const formValues = initialValues ? { ...defaultFormValues, ...initialValues } : defaultFormValues
-  const [hasSimulationRun, setHasSimulationRun] = useState(false)
+  const [lastSimulatedValues, setLastSimulatedValues] = useState<MortgageFormData | null>(null)
 
   const {
     control,
     handleSubmit,
-    formState: { errors, isDirty },
+    formState: { errors },
     watch,
   } = useForm<MortgageFormData>({
     resolver: zodResolver(mortgageFormSchema),
@@ -45,51 +45,30 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   })
 
   // Watch all form values to detect changes
-  const watchedValues = watch()
+  const currentValues = watch()
 
-  // Reset simulation run state when form values change
-  useEffect(() => {
-    if (isDirty || hasSimulationRun) {
-      setHasSimulationRun(false)
-    }
-  }, [watchedValues, isDirty])
+  // Check if current form values differ from last simulated values
+  const hasFormChanged = lastSimulatedValues ? 
+    JSON.stringify(currentValues) !== JSON.stringify(lastSimulatedValues) : 
+    false
 
   const handleFormSubmit = (data: MortgageFormData) => {
-    setHasSimulationRun(true)
+    setLastSimulatedValues(data)
     onSubmit(data)
   }
 
-  // Button should be enabled if form is dirty (changed) or no simulation has run yet
-  const isButtonEnabled = !isLoading && (!hasSimulationRun || isDirty)
+  // Button should be enabled if no simulation has run yet OR form has changed since last simulation
+  const isButtonEnabled = !isLoading && (!lastSimulatedValues || hasFormChanged)
 
   return (
     <Card elevation={3}>
       <CardContent sx={{ p: 3 }}>
         {/* Header without reset button */}
         <Box sx={{ mb: 3 }}>
-          <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Calculate color="primary" />
             Mortgage Simulation Parameters
           </Typography>
-          
-          {/* Run Simulation Button at the top */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-            <Button
-              onClick={handleSubmit(handleFormSubmit)}
-              variant="contained"
-              size="large"
-              disabled={!isButtonEnabled}
-              startIcon={<Calculate />}
-              sx={{ 
-                minWidth: 200,
-                py: 1.5,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-              }}
-            >
-              {isLoading ? 'Running Simulation...' : 'Run Simulation'}
-            </Button>
-          </Box>
         </Box>
 
         <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -399,6 +378,25 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               )}
             />
           </Paper>
+
+          {/* Run Simulation Button */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 2 }}>
+            <Button
+              onClick={handleSubmit(handleFormSubmit)}
+              variant="contained"
+              size="large"
+              disabled={!isButtonEnabled}
+              startIcon={<Calculate />}
+              sx={{ 
+                minWidth: 200,
+                py: 1.5,
+                fontSize: '1.1rem',
+                fontWeight: 600,
+              }}
+            >
+              {isLoading ? 'Running Simulation...' : 'Run Simulation'}
+            </Button>
+          </Box>
         </Box>
       </CardContent>
     </Card>
