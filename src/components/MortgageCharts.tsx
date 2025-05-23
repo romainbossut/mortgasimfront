@@ -4,21 +4,10 @@ import {
   Card,
   CardContent,
   Typography,
-  Paper,
-  Alert,
   CircularProgress,
-  Grid,
   Chip,
 } from '@mui/material'
 import { LineChart } from '@mui/x-charts/LineChart'
-import {
-  TrendingUp,
-  AccountBalance,
-  Savings,
-  Home,
-  Warning,
-  Celebration,
-} from '@mui/icons-material'
 import type { ChartData, SummaryStatistics } from '../types/mortgage'
 
 interface MortgageChartsProps {
@@ -121,13 +110,6 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('en-GB', { 
       year: 'numeric', 
-      month: 'short' 
-    })
-  }
-
-  const formatDateTick = (date: Date) => {
-    return date.toLocaleDateString('en-GB', { 
-      year: '2-digit', 
       month: 'short' 
     })
   }
