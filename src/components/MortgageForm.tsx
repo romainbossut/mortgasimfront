@@ -478,9 +478,6 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   <Box 
                     key={field.id} 
                     sx={{ 
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 2,
                       p: 2,
                       mb: 2,
                       backgroundColor: 'rgba(255, 255, 255, 0.5)',
@@ -491,37 +488,84 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                       }
                     }}
                   >
-                    {/* Month/Year Date Input */}
-                    <Controller
-                      name={`custom_overpayments.${index}.month`}
-                      control={control}
-                      render={({ field: monthField }) => {
-                        const currentMonth = currentValues.custom_overpayments?.[index]?.month || 1
-                        const currentYear = currentValues.custom_overpayments?.[index]?.year || new Date().getFullYear()
-                        const monthValue = `${currentYear}-${String(currentMonth).padStart(2, '0')}`
-                        
-                        return (
+                    {/* Header with overpayment number and delete button */}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="body2" fontWeight="medium" color="text.secondary">
+                        Overpayment #{index + 1}
+                      </Typography>
+                      <IconButton
+                        onClick={() => removeCustomOverpayment(index)}
+                        color="error"
+                        size="small"
+                        sx={{ 
+                          '&:hover': { 
+                            backgroundColor: 'rgba(211, 47, 47, 0.1)' 
+                          }
+                        }}
+                      >
+                        <Delete />
+                      </IconButton>
+                    </Box>
+
+                    {/* Fields in a responsive grid */}
+                    <Box sx={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: { xs: '1fr', sm: '200px 1fr' }, 
+                      gap: 2,
+                      alignItems: 'flex-start'
+                    }}>
+                      {/* Month/Year Date Input */}
+                      <Controller
+                        name={`custom_overpayments.${index}.month`}
+                        control={control}
+                        render={({ field: monthField }) => {
+                          const currentMonth = currentValues.custom_overpayments?.[index]?.month || 1
+                          const currentYear = currentValues.custom_overpayments?.[index]?.year || new Date().getFullYear()
+                          const monthValue = `${currentYear}-${String(currentMonth).padStart(2, '0')}`
+                          
+                          return (
+                            <TextField
+                              type="month"
+                              label="Month/Year"
+                              size="small"
+                              fullWidth
+                              value={monthValue}
+                              onChange={(e) => {
+                                const [year, month] = e.target.value.split('-')
+                                if (year && month) {
+                                  monthField.onChange(parseInt(month))
+                                  setValue(`custom_overpayments.${index}.year` as any, parseInt(year))
+                                }
+                              }}
+                              error={!!errors.custom_overpayments?.[index]?.month || !!errors.custom_overpayments?.[index]?.year}
+                              InputLabelProps={{
+                                shrink: true,
+                              }}
+                            />
+                          )
+                        }}
+                      />
+                      
+                      {/* Amount Field */}
+                      <Controller
+                        name={`custom_overpayments.${index}.amount`}
+                        control={control}
+                        render={({ field: amountField }) => (
                           <TextField
-                            type="month"
-                            label="Month/Year"
+                            {...amountField}
+                            onChange={(e) => amountField.onChange(e.target.value ? Number(e.target.value) : '')}
+                            label="Amount (£)"
+                            type="number"
+                            error={!!errors.custom_overpayments?.[index]?.amount}
+                            helperText={errors.custom_overpayments?.[index]?.amount?.message}
+                            inputProps={{ min: 0 }}
                             size="small"
-                            sx={{ minWidth: 140 }}
-                            value={monthValue}
-                            onChange={(e) => {
-                              const [year, month] = e.target.value.split('-')
-                              if (year && month) {
-                                monthField.onChange(parseInt(month))
-                                setValue(`custom_overpayments.${index}.year` as any, parseInt(year))
-                              }
-                            }}
-                            error={!!errors.custom_overpayments?.[index]?.month || !!errors.custom_overpayments?.[index]?.year}
-                            InputLabelProps={{
-                              shrink: true,
-                            }}
+                            placeholder="5000"
+                            fullWidth
                           />
-                        )
-                      }}
-                    />
+                        )}
+                      />
+                    </Box>
                     
                     {/* Hidden Year Field */}
                     <Controller
@@ -529,40 +573,6 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                       control={control}
                       render={() => <div style={{ display: 'none' }} />}
                     />
-                    
-                    {/* Amount Field */}
-                    <Controller
-                      name={`custom_overpayments.${index}.amount`}
-                      control={control}
-                      render={({ field: amountField }) => (
-                        <TextField
-                          {...amountField}
-                          onChange={(e) => amountField.onChange(e.target.value ? Number(e.target.value) : '')}
-                          label="Amount (£)"
-                          type="number"
-                          error={!!errors.custom_overpayments?.[index]?.amount}
-                          inputProps={{ min: 0 }}
-                          size="small"
-                          placeholder="5000"
-                          sx={{ flex: 1 }}
-                        />
-                      )}
-                    />
-                    
-                    {/* Delete Button */}
-                    <IconButton
-                      onClick={() => removeCustomOverpayment(index)}
-                      color="error"
-                      size="small"
-                      sx={{ 
-                        mt: 0.5,
-                        '&:hover': { 
-                          backgroundColor: 'rgba(211, 47, 47, 0.1)' 
-                        }
-                      }}
-                    >
-                      <Delete />
-                    </IconButton>
                   </Box>
                 ))}
               </Box>
