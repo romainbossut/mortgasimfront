@@ -72,15 +72,37 @@ export const mortgageFormSchema = z.object({
     .min(0, 'Years after payoff cannot be negative')
     .max(20, 'Years after payoff cannot exceed 20'),
   
-  overpayments: z
-    .string()
-    .regex(
-      /^(\d+:\d+(\.\d+)?(,\d+:\d+(\.\d+)?)*)?$/,
-      'Overpayments format should be "month:amount,month:amount" (e.g., "18:20000,19:10000")'
-    )
+  // Overpayments - new user-friendly structure
+  overpayment_type: z
+    .enum(['none', 'regular', 'custom'])
+    .default('none'),
+  
+  regular_overpayment_amount: z
+    .number()
+    .min(0, 'Overpayment amount cannot be negative')
+    .optional(),
+  
+  regular_overpayment_months: z
+    .number()
+    .int('Duration must be a whole number of months')
+    .min(1, 'Duration must be at least 1 month')
+    .max(300, 'Duration cannot exceed 300 months')
+    .optional(),
+  
+  custom_overpayments: z
+    .array(z.object({
+      month: z.number().int('Month must be a whole number').min(1, 'Month must be at least 1'),
+      amount: z.number().min(0, 'Amount cannot be negative'),
+    }))
     .optional()
-    .or(z.literal('')),
+    .default([]),
 })
+
+// Helper type for custom overpayments
+export type CustomOverpayment = {
+  month: number
+  amount: number
+}
 
 export type MortgageFormData = z.infer<typeof mortgageFormSchema>
 
@@ -104,4 +126,32 @@ export const defaultFormValues: MortgageFormData = {
   typical_payment: 878,
   asset_value: 360000,
   show_years_after_payoff: 5,
+  overpayment_type: 'none',
+  custom_overpayments: [],
+}
+
+// Helper function to convert new overpayment structure to API format
+export const convertOverpaymentsToApiFormat = (data: MortgageFormData): string | undefined => {
+  if (data.overpayment_type === 'none') {
+    return undefined
+  }
+  
+  if (data.overpayment_type === 'regular' && data.regular_overpayment_amount && data.regular_overpayment_months) {
+    // Convert regular overpayments to month:amount format
+    const overpayments: string[] = []
+    for (let i = 1; i <= data.regular_overpayment_months; i++) {
+      overpayments.push(`${i}:${data.regular_overpayment_amount}`)
+    }
+    return overpayments.join(',')
+  }
+  
+  if (data.overpayment_type === 'custom' && data.custom_overpayments && data.custom_overpayments.length > 0) {
+    // Convert custom overpayments to month:amount format
+    return data.custom_overpayments
+      .filter(op => op.month > 0 && op.amount > 0)
+      .map(op => `${op.month}:${op.amount}`)
+      .join(',')
+  }
+  
+  return undefined
 } 

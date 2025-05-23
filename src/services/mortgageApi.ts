@@ -1,5 +1,7 @@
 import axios from 'axios'
 import type { SimulationRequest, SimulationResponse, HTTPValidationError } from '../types/mortgage'
+import type { MortgageFormData } from '../utils/validation'
+import { convertOverpaymentsToApiFormat } from '../utils/validation'
 
 // Environment-based API URL configuration
 const getApiBaseUrl = (): string => {
@@ -109,7 +111,7 @@ export class MortgageApiService {
 }
 
 // Helper function to transform form data to API request format
-export const transformFormDataToRequest = (formData: any): SimulationRequest => {
+export const transformFormDataToRequest = (formData: MortgageFormData): SimulationRequest => {
   return {
     mortgage: {
       amount: formData.mortgage_amount,
@@ -128,7 +130,7 @@ export const transformFormDataToRequest = (formData: any): SimulationRequest => 
       typical_payment: formData.typical_payment,
       asset_value: formData.asset_value,
       show_years_after_payoff: formData.show_years_after_payoff,
-      overpayments: formData.overpayments || null,
+      overpayments: convertOverpaymentsToApiFormat(formData) || null,
       start_date: formData.start_date,
     },
   }

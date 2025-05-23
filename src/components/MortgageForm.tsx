@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box,
@@ -9,6 +9,13 @@ import {
   TextField,
   Button,
   Paper,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  IconButton,
+  Divider,
 } from '@mui/material'
 import {
   Calculate,
@@ -16,6 +23,9 @@ import {
   Savings,
   Settings,
   CalendarToday,
+  Add,
+  Delete,
+  PaymentOutlined,
 } from '@mui/icons-material'
 import { mortgageFormSchema, defaultFormValues } from '../utils/validation'
 import type { MortgageFormData } from '../utils/validation'
@@ -44,6 +54,12 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
     defaultValues: formValues,
   })
 
+  // Use field array for custom overpayments
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "custom_overpayments"
+  })
+
   // Watch all form values to detect changes
   const currentValues = watch()
 
@@ -59,6 +75,14 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
 
   // Button should be enabled if no simulation has run yet OR form has changed since last simulation
   const isButtonEnabled = !isLoading && (!lastSimulatedValues || hasFormChanged)
+
+  const addCustomOverpayment = () => {
+    append({ month: 1, amount: 0 })
+  }
+
+  const removeCustomOverpayment = (index: number) => {
+    remove(index)
+  }
 
   return (
     <Card elevation={3}>
@@ -357,26 +381,147 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
 
           {/* Overpayments */}
           <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(237, 108, 2, 0.02)' }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <PaymentOutlined color="warning" />
+              Overpayments (Optional)
+            </Typography>
+            
             <Controller
-              name="overpayments"
+              name="overpayment_type"
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Overpayments (Optional)"
-                  error={!!errors.overpayments}
-                  helperText={
-                    errors.overpayments?.message || 
-                    'Format: month:amount,month:amount (e.g., "18:20000,24:15000")'
-                  }
-                  fullWidth
-                  placeholder="e.g., 18:20000,24:15000"
-                  multiline
-                  rows={2}
-                  size="small"
-                />
+                <FormControl component="fieldset" sx={{ mb: 2 }}>
+                  <RadioGroup
+                    {...field}
+                    row
+                    sx={{ gap: 2 }}
+                  >
+                    <FormControlLabel value="none" control={<Radio />} label="No Overpayments" />
+                    <FormControlLabel value="regular" control={<Radio />} label="Regular Overpayments" />
+                    <FormControlLabel value="custom" control={<Radio />} label="Custom Overpayments" />
+                  </RadioGroup>
+                </FormControl>
               )}
             />
+
+            {/* Regular Overpayments */}
+            {currentValues.overpayment_type === 'regular' && (
+              <Box sx={{ mt: 2 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Set up regular monthly overpayments
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                  <Controller
+                    name="regular_overpayment_amount"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                        label="Monthly Amount (£)"
+                        type="number"
+                        error={!!errors.regular_overpayment_amount}
+                        helperText={errors.regular_overpayment_amount?.message}
+                        fullWidth
+                        placeholder="500"
+                        inputProps={{ min: 0 }}
+                        size="small"
+                      />
+                    )}
+                  />
+                  <Controller
+                    name="regular_overpayment_months"
+                    control={control}
+                    render={({ field }) => (
+                      <TextField
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                        label="Duration (Months)"
+                        type="number"
+                        error={!!errors.regular_overpayment_months}
+                        helperText={errors.regular_overpayment_months?.message}
+                        fullWidth
+                        placeholder="12"
+                        inputProps={{ min: 1, max: 300 }}
+                        size="small"
+                      />
+                    )}
+                  />
+                </Box>
+              </Box>
+            )}
+
+            {/* Custom Overpayments */}
+            {currentValues.overpayment_type === 'custom' && (
+              <Box sx={{ mt: 2 }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="subtitle2">
+                    Add specific overpayments by month
+                  </Typography>
+                  <Button
+                    onClick={addCustomOverpayment}
+                    startIcon={<Add />}
+                    variant="outlined"
+                    size="small"
+                  >
+                    Add Overpayment
+                  </Button>
+                </Box>
+                
+                {fields.length === 0 && (
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+                    No overpayments added yet. Click "Add Overpayment" to start.
+                  </Typography>
+                )}
+                
+                {fields.map((field, index) => (
+                  <Box key={field.id} sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'flex-start' }}>
+                    <Controller
+                      name={`custom_overpayments.${index}.month`}
+                      control={control}
+                      render={({ field: monthField }) => (
+                        <TextField
+                          {...monthField}
+                          onChange={(e) => monthField.onChange(e.target.value ? Number(e.target.value) : '')}
+                          label="Month"
+                          type="number"
+                          error={!!errors.custom_overpayments?.[index]?.month}
+                          helperText={errors.custom_overpayments?.[index]?.month?.message}
+                          inputProps={{ min: 1 }}
+                          size="small"
+                          sx={{ minWidth: 100 }}
+                        />
+                      )}
+                    />
+                    <Controller
+                      name={`custom_overpayments.${index}.amount`}
+                      control={control}
+                      render={({ field: amountField }) => (
+                        <TextField
+                          {...amountField}
+                          onChange={(e) => amountField.onChange(e.target.value ? Number(e.target.value) : '')}
+                          label="Amount (£)"
+                          type="number"
+                          error={!!errors.custom_overpayments?.[index]?.amount}
+                          helperText={errors.custom_overpayments?.[index]?.amount?.message}
+                          inputProps={{ min: 0 }}
+                          size="small"
+                          sx={{ flex: 1 }}
+                        />
+                      )}
+                    />
+                    <IconButton
+                      onClick={() => removeCustomOverpayment(index)}
+                      color="error"
+                      size="small"
+                      sx={{ mt: 0.5 }}
+                    >
+                      <Delete />
+                    </IconButton>
+                  </Box>
+                ))}
+              </Box>
+            )}
           </Paper>
 
           {/* Run Simulation Button */}
