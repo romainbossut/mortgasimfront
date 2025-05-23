@@ -171,20 +171,43 @@ Key features of the API:
 
 ## 🚀 Deployment
 
-### Production Build
+### Vercel (Recommended)
+
+This project is optimized for Vercel deployment with the included `vercel.json` configuration.
+
+#### Deploy to Vercel:
+
+1. **Option 1: Connect GitHub Repository**
+   - Push your code to GitHub
+   - Go to [vercel.com](https://vercel.com)
+   - Click "New Project" and import your GitHub repository
+   - Vercel will automatically detect the Vite framework and configure the build
+
+2. **Option 2: Deploy via CLI**
+   ```bash
+   # Install Vercel CLI
+   npm i -g vercel
+   
+   # Deploy
+   vercel
+   
+   # For production deployment
+   vercel --prod
+   ```
+
+#### Environment Variables
+If you need to override the API URL, you can set:
+- `VITE_ENV=production` (automatically set by vercel.json)
+- `VITE_API_URL=https://your-custom-api.com` (optional override)
+
+### Other Platforms
+
+For other deployment platforms, build the project and serve the `dist` folder:
 
 ```bash
 npm run build
+# Serve the 'dist' directory as a static site
 ```
-
-This creates a `dist/` folder with optimized production files.
-
-### Environment Configuration
-
-For production deployment, ensure the environment is configured correctly:
-
-- Set `VITE_ENV=production` to use the hosted API
-- The application will automatically use `https://api.mortgasim.com/`
 
 ## 🤝 Contributing
 
