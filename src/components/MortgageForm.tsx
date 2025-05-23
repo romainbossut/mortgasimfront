@@ -507,13 +507,8 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                       </IconButton>
                     </Box>
 
-                    {/* Fields in a responsive grid */}
-                    <Box sx={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: { xs: '1fr', sm: '200px 1fr' }, 
-                      gap: 2,
-                      alignItems: 'flex-start'
-                    }}>
+                    {/* Fields in a vertical layout */}
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {/* Month/Year Date Input */}
                       <Controller
                         name={`custom_overpayments.${index}.month`}
@@ -528,7 +523,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                               type="month"
                               label="Month/Year"
                               size="small"
-                              fullWidth
+                              sx={{ maxWidth: 200 }}
                               value={monthValue}
                               onChange={(e) => {
                                 const [year, month] = e.target.value.split('-')
@@ -546,7 +541,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                         }}
                       />
                       
-                      {/* Amount Field */}
+                      {/* Amount Field - Full Width */}
                       <Controller
                         name={`custom_overpayments.${index}.amount`}
                         control={control}
@@ -554,13 +549,13 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                           <TextField
                             {...amountField}
                             onChange={(e) => amountField.onChange(e.target.value ? Number(e.target.value) : '')}
-                            label="Amount (£)"
+                            label="Overpayment Amount (£)"
                             type="number"
                             error={!!errors.custom_overpayments?.[index]?.amount}
-                            helperText={errors.custom_overpayments?.[index]?.amount?.message}
+                            helperText={errors.custom_overpayments?.[index]?.amount?.message || 'Enter the amount you want to overpay in this month'}
                             inputProps={{ min: 0 }}
                             size="small"
-                            placeholder="5000"
+                            placeholder="e.g., 5000"
                             fullWidth
                           />
                         )}
