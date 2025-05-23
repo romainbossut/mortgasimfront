@@ -30,7 +30,7 @@ export const Footer: React.FC = () => {
             }}
           >
             <Copyright sx={{ fontSize: '1rem' }} />
-            {currentYear} Romain Bossut. All rights reserved.
+            {currentYear} MortgaSim. All rights reserved.
           </Typography>
           
           <Typography 

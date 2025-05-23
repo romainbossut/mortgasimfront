@@ -123,7 +123,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               Mortgage Details
             </Typography>
             
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
               <Controller
                 name="mortgage_amount"
                 control={control}
@@ -245,7 +245,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               Savings Details
             </Typography>
             
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
               <Controller
                 name="initial_balance"
                 control={control}
@@ -312,7 +312,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               Simulation Settings
             </Typography>
             
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
               <Controller
                 name="typical_payment"
                 control={control}
