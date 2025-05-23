@@ -61,6 +61,7 @@ export const DynamicMortgagePage: React.FC = () => {
   const urlParams = useMemo(() => {
     // Try comprehensive URL parameter decoding first
     const comprehensiveParams = decodeFormDataFromUrl(searchParams)
+    console.log('Comprehensive params:', comprehensiveParams)
     if (Object.keys(comprehensiveParams).length > 0) {
       return comprehensiveParams
     }
@@ -68,6 +69,7 @@ export const DynamicMortgagePage: React.FC = () => {
     // Fallback to legacy parsing for backwards compatibility
     if (slug) {
       const legacyParams = parseMortgageSlug(slug)
+      console.log('Legacy slug params:', legacyParams)
       if (legacyParams) {
         return {
           mortgage_amount: legacyParams.loan,
@@ -78,6 +80,7 @@ export const DynamicMortgagePage: React.FC = () => {
       }
     } else {
       const legacyParams = parseMortgageQuery(searchParams)
+      console.log('Legacy query params:', legacyParams)
       if (Object.keys(legacyParams).length > 0) {
         return {
           mortgage_amount: legacyParams.loan,
@@ -88,6 +91,7 @@ export const DynamicMortgagePage: React.FC = () => {
       }
     }
     
+    console.log('No URL params found, returning empty object')
     return {}
   }, [slug, searchParams])
 
@@ -107,14 +111,18 @@ export const DynamicMortgagePage: React.FC = () => {
 
   // Generate pre-filled form data
   const preFilledFormData = useMemo(() => {
+    console.log('URL params for form:', urlParams)
     if (!urlParams || Object.keys(urlParams).length === 0) {
+      console.log('Using default form values')
       return defaultFormValues
     }
 
-    return {
+    const merged = {
       ...defaultFormValues,
       ...urlParams,
     }
+    console.log('Pre-filled form data:', merged)
+    return merged
   }, [urlParams])
 
   // SEO metadata
