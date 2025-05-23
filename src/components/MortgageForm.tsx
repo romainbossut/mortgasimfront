@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -10,15 +10,10 @@ import {
   Button,
   Paper,
   FormControl,
-  FormLabel,
   RadioGroup,
   FormControlLabel,
   Radio,
   IconButton,
-  Divider,
-  Select,
-  MenuItem,
-  InputLabel,
 } from '@mui/material'
 import {
   Calculate,
@@ -30,7 +25,7 @@ import {
   Delete,
   PaymentOutlined,
 } from '@mui/icons-material'
-import { mortgageFormSchema, defaultFormValues, getMonthName } from '../utils/validation'
+import { mortgageFormSchema, defaultFormValues } from '../utils/validation'
 import type { MortgageFormData } from '../utils/validation'
 
 interface MortgageFormProps {
@@ -54,7 +49,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
     watch,
     setValue,
   } = useForm<MortgageFormData>({
-    resolver: zodResolver(mortgageFormSchema),
+    resolver: zodResolver(mortgageFormSchema) as any,
     defaultValues: formValues,
   })
 
@@ -72,7 +67,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
     JSON.stringify(currentValues) !== JSON.stringify(lastSimulatedValues) : 
     false
 
-  const handleFormSubmit = (data: MortgageFormData) => {
+  const handleFormSubmit = (data: any) => {
     setLastSimulatedValues(data)
     onSubmit(data)
   }
