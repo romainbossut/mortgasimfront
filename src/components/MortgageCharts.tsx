@@ -37,12 +37,37 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
     }).format(value)
   }
 
-  // Format currency for axis (shorter format)
+  // Format currency for large amounts (mortgage/savings balances)
   const formatCurrencyAbbreviated = (value: number) => {
     if (value >= 1000000) {
       return `£${(value / 1000000).toFixed(1)}M`
-    } else if (value >= 1000) {
+    } else if (value >= 100000) {
       return `£${(value / 1000).toFixed(0)}K`
+    } else if (value >= 10000) {
+      return `£${(value / 1000).toFixed(1)}K`
+    }
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
+  // Format currency for monthly payments (no abbreviations for clarity)
+  const formatMonthlyPayment = (value: number) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
+  // Format currency for Y-axis labels (more compact)
+  const formatYAxisPayment = (value: number) => {
+    if (value >= 1000) {
+      return `£${(value / 1000).toFixed(1)}k`
     }
     return `£${value.toFixed(0)}`
   }
@@ -159,7 +184,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
 
   const chartConfig = {
     height: 350,
-    margin: { left: 80, right: 20, top: 40, bottom: 60 },
+    margin: { left: 100, right: 20, top: 40, bottom: 60 },
     grid: { horizontal: true, vertical: false },
     curve: 'monotoneX' as const,
     sx: chartStyles,
@@ -355,11 +380,11 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
                 data: processedData.monthlyPaymentData,
                 label: 'Monthly Payment',
                 color: '#ff9800',
-                valueFormatter: (value: number | null) => value !== null ? formatCurrency(value) : '',
+                valueFormatter: (value: number | null) => value !== null ? formatMonthlyPayment(value) : '',
               },
             ]}
             yAxis={[{
-              valueFormatter: formatCurrencyAbbreviated,
+              valueFormatter: formatYAxisPayment,
               tickLabelStyle: { fontSize: '0.75rem' },
             }]}
             {...chartConfig}
