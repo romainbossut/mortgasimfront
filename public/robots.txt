@@ -1,58 +1,8 @@
-# Robots.txt for Mortgage Simulation Tool
-# Optimized for SEO and search engine crawling
-
-# Allow all search engines to crawl the main content
 User-agent: *
 Allow: /
 
-# Disallow crawling of potentially sensitive or unnecessary paths
-Disallow: /api/
-Disallow: /.well-known/
-Disallow: /admin/
-Disallow: /private/
-Disallow: /temp/
-Disallow: /tmp/
-Disallow: /_next/
-Disallow: /node_modules/
-Disallow: /*.json$
-Disallow: /*.log$
+# Sitemap
+Sitemap: https://mortgasim.com/sitemap.xml
 
-# Allow crawling of static assets for better indexing
-Allow: /assets/
-Allow: /images/
-Allow: /css/
-Allow: /js/
-Allow: /fonts/
-
-# Special rules for major search engines
-User-agent: Googlebot
-Allow: /
+# Crawl-delay
 Crawl-delay: 1
-
-User-agent: Bingbot
-Allow: /
-Crawl-delay: 1
-
-User-agent: Slurp
-Allow: /
-Crawl-delay: 2
-
-# Block aggressive or unwanted crawlers
-User-agent: AhrefsBot
-Disallow: /
-
-User-agent: MJ12bot
-Disallow: /
-
-User-agent: DotBot
-Disallow: /
-
-# Sitemap location (update this URL to match your domain)
-Sitemap: https://www.mortgasim.com/sitemap.xml
-
-# Additional SEO directives
-# Cache directive for better performance
-Cache-delay: 86400
-
-# Preferred domain and canonical URL structure
-# This helps with SEO consistency 

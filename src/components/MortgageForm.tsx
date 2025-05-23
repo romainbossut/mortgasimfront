@@ -24,12 +24,16 @@ import type { MortgageFormData } from '../utils/validation'
 interface MortgageFormProps {
   onSubmit: (data: MortgageFormData) => void
   isLoading?: boolean
+  initialValues?: Partial<MortgageFormData>
 }
 
 export const MortgageForm: React.FC<MortgageFormProps> = ({
   onSubmit,
   isLoading = false,
+  initialValues,
 }) => {
+  const formValues = initialValues ? { ...defaultFormValues, ...initialValues } : defaultFormValues
+
   const {
     control,
     handleSubmit,
@@ -37,11 +41,11 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
     reset,
   } = useForm<MortgageFormData>({
     resolver: zodResolver(mortgageFormSchema),
-    defaultValues: defaultFormValues,
+    defaultValues: formValues,
   })
 
   const handleReset = () => {
-    reset(defaultFormValues)
+    reset(formValues)
   }
 
   return (
