@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -25,7 +25,13 @@ import {
   Delete,
   PaymentOutlined,
 } from '@mui/icons-material'
-import { mortgageFormSchema, defaultFormValues } from '../utils/validation'
+import { 
+  mortgageFormSchema, 
+  defaultFormValues,
+  saveFormDataToStorage,
+  loadFormDataFromStorage,
+  clearFormDataFromStorage
+} from '../utils/validation'
 import type { MortgageFormData } from '../utils/validation'
 
 interface MortgageFormProps {
@@ -39,8 +45,21 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   isLoading = false,
   initialValues,
 }) => {
-  const formValues = initialValues ? { ...defaultFormValues, ...initialValues } : defaultFormValues
+  // Determine form values: initialValues take precedence over stored data
+  const getInitialFormValues = useCallback(() => {
+    if (initialValues) {
+      // If initialValues are provided, use them (e.g., from URL parameters)
+      return { ...defaultFormValues, ...initialValues }
+    } else {
+      // Try to load from localStorage, fallback to defaults
+      const storedData = loadFormDataFromStorage()
+      return storedData ? { ...defaultFormValues, ...storedData } : defaultFormValues
+    }
+  }, [initialValues])
+
+  const formValues = getInitialFormValues()
   const [lastSimulatedValues, setLastSimulatedValues] = useState<MortgageFormData | null>(null)
+  const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(null)
 
   const {
     control,
@@ -62,6 +81,38 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   // Watch all form values to detect changes
   const currentValues = watch()
 
+  // Debounced save to localStorage
+  const debouncedSave = useCallback((data: MortgageFormData) => {
+    // Clear existing timeout
+    if (saveTimeoutId) {
+      clearTimeout(saveTimeoutId)
+    }
+
+    // Set new timeout
+    const timeoutId = setTimeout(() => {
+      // Only save if no initialValues were provided (user's own data)
+      if (!initialValues) {
+        saveFormDataToStorage(data)
+      }
+    }, 1000) // Save after 1 second of inactivity
+
+    setSaveTimeoutId(timeoutId)
+  }, [saveTimeoutId, initialValues])
+
+  // Save form data when values change
+  useEffect(() => {
+    if (currentValues && Object.keys(currentValues).length > 0) {
+      debouncedSave(currentValues)
+    }
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (saveTimeoutId) {
+        clearTimeout(saveTimeoutId)
+      }
+    }
+  }, [currentValues, debouncedSave])
+
   // Check if current form values differ from last simulated values
   const hasFormChanged = lastSimulatedValues ? 
     JSON.stringify(currentValues) !== JSON.stringify(lastSimulatedValues) : 
@@ -82,6 +133,12 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
 
   const removeCustomOverpayment = (index: number) => {
     remove(index)
+  }
+
+  // Clear stored data function (for debugging or reset)
+  const handleClearStoredData = () => {
+    clearFormDataFromStorage()
+    console.log('Stored form data cleared')
   }
 
   return (

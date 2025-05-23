@@ -205,4 +205,83 @@ export const getMonthName = (monthNumber: number): string => {
     'July', 'August', 'September', 'October', 'November', 'December'
   ]
   return months[monthNumber - 1] || 'Invalid'
+}
+
+// Local storage utilities with validation
+const STORAGE_KEY = 'mortgasim_form_data'
+const STORAGE_VERSION = '1.0.0' // Update this when form schema changes
+
+interface StoredFormData {
+  version: string
+  timestamp: number
+  data: MortgageFormData
+}
+
+// Validate stored data against current schema
+export const validateStoredData = (stored: any): stored is StoredFormData => {
+  try {
+    // Check if it has the expected structure
+    if (!stored || typeof stored !== 'object') return false
+    if (!stored.version || !stored.timestamp || !stored.data) return false
+    
+    // Check version compatibility
+    if (stored.version !== STORAGE_VERSION) return false
+    
+    // Check if data is not too old (30 days)
+    const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000)
+    if (stored.timestamp < thirtyDaysAgo) return false
+    
+    // Validate against schema
+    const result = mortgageFormSchema.safeParse(stored.data)
+    return result.success
+  } catch (error) {
+    console.warn('Failed to validate stored data:', error)
+    return false
+  }
+}
+
+// Save form data to localStorage
+export const saveFormDataToStorage = (data: MortgageFormData): void => {
+  try {
+    const storedData: StoredFormData = {
+      version: STORAGE_VERSION,
+      timestamp: Date.now(),
+      data
+    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(storedData))
+  } catch (error) {
+    console.warn('Failed to save form data to localStorage:', error)
+  }
+}
+
+// Load form data from localStorage
+export const loadFormDataFromStorage = (): MortgageFormData | null => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return null
+    
+    const parsedData = JSON.parse(stored)
+    
+    if (validateStoredData(parsedData)) {
+      return parsedData.data
+    } else {
+      // Invalid format - clear the storage
+      console.warn('Stored form data is invalid or outdated, clearing localStorage')
+      clearFormDataFromStorage()
+      return null
+    }
+  } catch (error) {
+    console.warn('Failed to load form data from localStorage:', error)
+    clearFormDataFromStorage()
+    return null
+  }
+}
+
+// Clear form data from localStorage
+export const clearFormDataFromStorage = (): void => {
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch (error) {
+    console.warn('Failed to clear form data from localStorage:', error)
+  }
 } 
