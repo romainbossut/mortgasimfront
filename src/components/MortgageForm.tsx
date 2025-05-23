@@ -16,6 +16,9 @@ import {
   Radio,
   IconButton,
   Divider,
+  Select,
+  MenuItem,
+  InputLabel,
 } from '@mui/material'
 import {
   Calculate,
@@ -27,7 +30,7 @@ import {
   Delete,
   PaymentOutlined,
 } from '@mui/icons-material'
-import { mortgageFormSchema, defaultFormValues } from '../utils/validation'
+import { mortgageFormSchema, defaultFormValues, getMonthName } from '../utils/validation'
 import type { MortgageFormData } from '../utils/validation'
 
 interface MortgageFormProps {
@@ -77,7 +80,8 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   const isButtonEnabled = !isLoading && (!lastSimulatedValues || hasFormChanged)
 
   const addCustomOverpayment = () => {
-    append({ month: 1, amount: 0 })
+    const currentYear = new Date().getFullYear()
+    append({ month: 1, year: currentYear, amount: 0 })
   }
 
   const removeCustomOverpayment = (index: number) => {
@@ -456,7 +460,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               <Box sx={{ mt: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Typography variant="subtitle2">
-                    Add specific overpayments by month
+                    Add specific overpayments by month/year
                   </Typography>
                   <Button
                     onClick={addCustomOverpayment}
@@ -475,50 +479,105 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                 )}
                 
                 {fields.map((field, index) => (
-                  <Box key={field.id} sx={{ display: 'flex', gap: 2, mb: 2, alignItems: 'flex-start' }}>
-                    <Controller
-                      name={`custom_overpayments.${index}.month`}
-                      control={control}
-                      render={({ field: monthField }) => (
-                        <TextField
-                          {...monthField}
-                          onChange={(e) => monthField.onChange(e.target.value ? Number(e.target.value) : '')}
-                          label="Month"
-                          type="number"
-                          error={!!errors.custom_overpayments?.[index]?.month}
-                          helperText={errors.custom_overpayments?.[index]?.month?.message}
-                          inputProps={{ min: 1 }}
+                  <Paper 
+                    key={field.id} 
+                    elevation={1} 
+                    sx={{ 
+                      p: 2, 
+                      mb: 2, 
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                      border: '1px solid rgba(0, 0, 0, 0.1)'
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {/* Header row with overpayment number and delete button */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <Typography variant="body2" fontWeight="medium" color="text.secondary">
+                          Overpayment #{index + 1}
+                        </Typography>
+                        <IconButton
+                          onClick={() => removeCustomOverpayment(index)}
+                          color="error"
                           size="small"
-                          sx={{ minWidth: 100 }}
+                          sx={{ 
+                            '&:hover': { 
+                              backgroundColor: 'rgba(211, 47, 47, 0.1)' 
+                            }
+                          }}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </Box>
+                      
+                      {/* Input fields row */}
+                      <Box sx={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: { xs: '1fr', sm: '150px 120px 1fr' }, 
+                        gap: 2,
+                        alignItems: 'flex-end'
+                      }}>
+                        <FormControl size="small" error={!!errors.custom_overpayments?.[index]?.month}>
+                          <InputLabel>Month</InputLabel>
+                          <Controller
+                            name={`custom_overpayments.${index}.month`}
+                            control={control}
+                            render={({ field: monthField }) => (
+                              <Select
+                                {...monthField}
+                                label="Month"
+                              >
+                                {Array.from({ length: 12 }, (_, i) => (
+                                  <MenuItem key={i + 1} value={i + 1}>
+                                    {getMonthName(i + 1)}
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            )}
+                          />
+                          {errors.custom_overpayments?.[index]?.month && (
+                            <Typography variant="caption" color="error" sx={{ mt: 0.5, fontSize: '0.75rem' }}>
+                              {errors.custom_overpayments[index]?.month?.message}
+                            </Typography>
+                          )}
+                        </FormControl>
+                        
+                        <Controller
+                          name={`custom_overpayments.${index}.year`}
+                          control={control}
+                          render={({ field: yearField }) => (
+                            <TextField
+                              {...yearField}
+                              onChange={(e) => yearField.onChange(e.target.value ? Number(e.target.value) : '')}
+                              label="Year"
+                              type="number"
+                              error={!!errors.custom_overpayments?.[index]?.year}
+                              helperText={errors.custom_overpayments?.[index]?.year?.message}
+                              inputProps={{ min: 2020, max: 2050 }}
+                              size="small"
+                            />
+                          )}
                         />
-                      )}
-                    />
-                    <Controller
-                      name={`custom_overpayments.${index}.amount`}
-                      control={control}
-                      render={({ field: amountField }) => (
-                        <TextField
-                          {...amountField}
-                          onChange={(e) => amountField.onChange(e.target.value ? Number(e.target.value) : '')}
-                          label="Amount (£)"
-                          type="number"
-                          error={!!errors.custom_overpayments?.[index]?.amount}
-                          helperText={errors.custom_overpayments?.[index]?.amount?.message}
-                          inputProps={{ min: 0 }}
-                          size="small"
-                          sx={{ flex: 1 }}
+                        
+                        <Controller
+                          name={`custom_overpayments.${index}.amount`}
+                          control={control}
+                          render={({ field: amountField }) => (
+                            <TextField
+                              {...amountField}
+                              onChange={(e) => amountField.onChange(e.target.value ? Number(e.target.value) : '')}
+                              label="Overpayment Amount (£)"
+                              type="number"
+                              error={!!errors.custom_overpayments?.[index]?.amount}
+                              helperText={errors.custom_overpayments?.[index]?.amount?.message}
+                              inputProps={{ min: 0 }}
+                              size="small"
+                              placeholder="e.g., 5000"
+                            />
+                          )}
                         />
-                      )}
-                    />
-                    <IconButton
-                      onClick={() => removeCustomOverpayment(index)}
-                      color="error"
-                      size="small"
-                      sx={{ mt: 0.5 }}
-                    >
-                      <Delete />
-                    </IconButton>
-                  </Box>
+                      </Box>
+                    </Box>
+                  </Paper>
                 ))}
               </Box>
             )}
@@ -546,4 +605,4 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
       </CardContent>
     </Card>
   )
-} 
+}

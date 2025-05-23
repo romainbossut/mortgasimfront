@@ -91,7 +91,8 @@ export const mortgageFormSchema = z.object({
   
   custom_overpayments: z
     .array(z.object({
-      month: z.number().int('Month must be a whole number').min(1, 'Month must be at least 1'),
+      month: z.number().int('Month must be a whole number').min(1, 'Month must be between 1-12').max(12, 'Month must be between 1-12'),
+      year: z.number().int('Year must be a whole number').min(2020, 'Year must be at least 2020'),
       amount: z.number().min(0, 'Amount cannot be negative'),
     }))
     .optional()
@@ -100,7 +101,8 @@ export const mortgageFormSchema = z.object({
 
 // Helper type for custom overpayments
 export type CustomOverpayment = {
-  month: number
+  month: number // Calendar month (1-12)
+  year: number
   amount: number
 }
 
@@ -154,20 +156,53 @@ export const convertOverpaymentsToApiFormat = (data: MortgageFormData): string |
       return undefined
     }
     
-    // Convert custom overpayments to month:amount format
-    const validOverpayments = data.custom_overpayments.filter(op => op.month > 0 && op.amount > 0)
+    // Convert custom overpayments to month:amount format using period index
+    const validOverpayments = data.custom_overpayments.filter(op => 
+      op.month >= 1 && op.month <= 12 && op.year >= 2020 && op.amount > 0
+    )
     
     if (validOverpayments.length === 0) {
       return undefined
     }
     
-    // Sort by month to ensure proper order
-    validOverpayments.sort((a, b) => a.month - b.month)
+    // Convert month/year to period index and sort by period
+    const convertedOverpayments = validOverpayments.map(op => ({
+      periodIndex: monthYearToPeriodIndex(op.month, op.year, data.start_date),
+      amount: op.amount
+    }))
     
-    return validOverpayments
-      .map(op => `${op.month}:${op.amount}`)
+    // Sort by period index
+    convertedOverpayments.sort((a, b) => a.periodIndex - b.periodIndex)
+    
+    return convertedOverpayments
+      .map(op => `${op.periodIndex}:${op.amount}`)
       .join(',')
   }
   
   return undefined
+}
+
+// Helper function to convert month/year to period index based on start date
+export const monthYearToPeriodIndex = (month: number, year: number, startDate: string): number => {
+  const start = new Date(startDate)
+  const target = new Date(year, month - 1) // month - 1 because Date uses 0-based months
+  
+  // Calculate the difference in months
+  const startYear = start.getFullYear()
+  const startMonth = start.getMonth()
+  const targetYear = target.getFullYear()
+  const targetMonth = target.getMonth()
+  
+  const periodIndex = (targetYear - startYear) * 12 + (targetMonth - startMonth) + 1
+  
+  return Math.max(1, periodIndex) // Ensure minimum of 1
+}
+
+// Helper function to get month name
+export const getMonthName = (monthNumber: number): string => {
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ]
+  return months[monthNumber - 1] || 'Invalid'
 } 
