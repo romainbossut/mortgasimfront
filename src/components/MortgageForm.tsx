@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -15,7 +15,6 @@ import {
   AccountBalance,
   Savings,
   Settings,
-  Refresh,
   CalendarToday,
 } from '@mui/icons-material'
 import { mortgageFormSchema, defaultFormValues } from '../utils/validation'
@@ -33,62 +32,67 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   initialValues,
 }) => {
   const formValues = initialValues ? { ...defaultFormValues, ...initialValues } : defaultFormValues
+  const [hasSimulationRun, setHasSimulationRun] = useState(false)
 
   const {
     control,
     handleSubmit,
-    formState: { errors },
-    reset,
+    formState: { errors, isDirty },
+    watch,
   } = useForm<MortgageFormData>({
     resolver: zodResolver(mortgageFormSchema),
     defaultValues: formValues,
   })
 
-  const handleReset = () => {
-    reset(formValues)
+  // Watch all form values to detect changes
+  const watchedValues = watch()
+
+  // Reset simulation run state when form values change
+  useEffect(() => {
+    if (isDirty || hasSimulationRun) {
+      setHasSimulationRun(false)
+    }
+  }, [watchedValues, isDirty])
+
+  const handleFormSubmit = (data: MortgageFormData) => {
+    setHasSimulationRun(true)
+    onSubmit(data)
   }
+
+  // Button should be enabled if form is dirty (changed) or no simulation has run yet
+  const isButtonEnabled = !isLoading && (!hasSimulationRun || isDirty)
 
   return (
     <Card elevation={3}>
       <CardContent sx={{ p: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
-          <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {/* Header without reset button */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
             <Calculate color="primary" />
             Mortgage Simulation Parameters
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1.5 }}>
+          
+          {/* Run Simulation Button at the top */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
             <Button
-              variant="outlined"
-              size="small"
-              onClick={handleReset}
-              disabled={isLoading}
-              startIcon={<Refresh sx={{ fontSize: '1rem' }} />}
-              sx={{
-                minWidth: 90,
-                height: 36,
-                px: 2,
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                borderColor: 'grey.400',
-                color: 'grey.700',
-                textTransform: 'none',
-                whiteSpace: 'nowrap',
-                '&:hover': {
-                  borderColor: 'grey.600',
-                  backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                },
-                '& .MuiButton-startIcon': {
-                  marginLeft: 0,
-                  marginRight: '8px',
-                },
+              onClick={handleSubmit(handleFormSubmit)}
+              variant="contained"
+              size="large"
+              disabled={!isButtonEnabled}
+              startIcon={<Calculate />}
+              sx={{ 
+                minWidth: 200,
+                py: 1.5,
+                fontSize: '1.1rem',
+                fontWeight: 600,
               }}
             >
-              Reset
+              {isLoading ? 'Running Simulation...' : 'Run Simulation'}
             </Button>
           </Box>
         </Box>
 
-        <Box component="form" onSubmit={handleSubmit(onSubmit)} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
           {/* Start Date */}
           <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(76, 175, 80, 0.02)' }}>
             <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -395,25 +399,6 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               )}
             />
           </Paper>
-
-          {/* Submit Button */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 2 }}>
-            <Button
-              type="submit"
-              variant="contained"
-              size="large"
-              disabled={isLoading}
-              startIcon={<Calculate />}
-              sx={{ 
-                minWidth: 200,
-                py: 1.5,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-              }}
-            >
-              {isLoading ? 'Running Simulation...' : 'Run Simulation'}
-            </Button>
-          </Box>
         </Box>
       </CardContent>
     </Card>
