@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery } from '@tanstack/react-query'
+import { track } from '@vercel/analytics'
 import {
   Box,
   Container,
@@ -29,6 +30,17 @@ import { defaultFormValues } from '../utils/validation'
 import type { MortgageFormData } from '../utils/validation'
 import type { SimulationResponse, SimulationRequest } from '../types/mortgage'
 
+// Utility function to safely extract error messages
+const getErrorMessage = (error: unknown): string => {
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as { message: unknown }).message)
+  }
+  if (typeof error === 'string') {
+    return error
+  }
+  return 'Unknown error'
+}
+
 export const DynamicMortgagePage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>()
   const [searchParams] = useSearchParams()
@@ -45,6 +57,19 @@ export const DynamicMortgagePage: React.FC = () => {
     }
     return parseMortgageQuery(searchParams)
   }, [slug, searchParams])
+
+  // Track page visits for dynamic mortgage pages
+  useEffect(() => {
+    if (urlParams) {
+      track('mortgage_page_visit', {
+        loan_amount: urlParams.loan?.toString() || 'unknown',
+        term_years: urlParams.term?.toString() || 'unknown',
+        interest_rate: urlParams.rate?.toString() || 'unknown',
+        url_format: slug ? 'slug' : 'query',
+        page_url: window.location.pathname,
+      })
+    }
+  }, [urlParams, slug])
 
   // Generate pre-filled form data
   const preFilledFormData = useMemo(() => {
@@ -136,9 +161,28 @@ export const DynamicMortgagePage: React.FC = () => {
     onSuccess: (data) => {
       setSimulationResults(data)
       setWarnings(data.warnings || [])
+      
+      // Track successful simulation
+      track('mortgage_simulation_completed', {
+        loan_amount: urlParams?.loan?.toString() || 'unknown',
+        term_years: urlParams?.term?.toString() || 'unknown',
+        interest_rate: urlParams?.rate?.toString() || 'unknown',
+        has_warnings: (data.warnings || []).length > 0,
+        warnings_count: (data.warnings || []).length,
+        auto_loaded: hasAutoLoaded,
+      })
     },
     onError: (error) => {
       console.error('Simulation failed:', error)
+      
+      // Track simulation errors
+      track('mortgage_simulation_error', {
+        loan_amount: urlParams?.loan?.toString() || 'unknown',
+        term_years: urlParams?.term?.toString() || 'unknown',
+        interest_rate: urlParams?.rate?.toString() || 'unknown',
+        error_message: getErrorMessage(error),
+        auto_loaded: hasAutoLoaded,
+      })
     },
   })
 
@@ -179,6 +223,18 @@ export const DynamicMortgagePage: React.FC = () => {
     setCurrentStartDate(formData.start_date)
     const request = transformFormDataToRequest(formData)
     setLastSimulationRequest(request)
+    
+    // Track manual form submission
+    track('mortgage_form_submitted', {
+      loan_amount: formData.mortgage_amount.toString(),
+      term_years: formData.term_years.toString(),
+      fixed_rate: formData.fixed_rate.toString(),
+      variable_rate: formData.variable_rate.toString(),
+      initial_balance: formData.initial_balance.toString(),
+      monthly_contribution: formData.monthly_contribution.toString(),
+      is_manual_submission: true,
+    })
+    
     simulationMutation.mutate(request)
   }
 
@@ -186,6 +242,13 @@ export const DynamicMortgagePage: React.FC = () => {
     if (!simulationResults || !lastSimulationRequest) return
     
     try {
+      // Track CSV export attempt
+      track('csv_export_started', {
+        loan_amount: urlParams?.loan?.toString() || 'unknown',
+        term_years: urlParams?.term?.toString() || 'unknown',
+        interest_rate: urlParams?.rate?.toString() || 'unknown',
+      })
+      
       const csvBlob = await MortgageApiService.exportCsv(lastSimulationRequest)
       
       const url = window.URL.createObjectURL(csvBlob)
@@ -196,8 +259,24 @@ export const DynamicMortgagePage: React.FC = () => {
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
+      
+      // Track successful CSV export
+      track('csv_export_completed', {
+        loan_amount: urlParams?.loan?.toString() || 'unknown',
+        term_years: urlParams?.term?.toString() || 'unknown',
+        interest_rate: urlParams?.rate?.toString() || 'unknown',
+        file_size: csvBlob.size.toString(),
+      })
     } catch (error) {
       console.error('Failed to export CSV:', error)
+      
+      // Track CSV export error
+      track('csv_export_error', {
+        loan_amount: urlParams?.loan?.toString() || 'unknown',
+        term_years: urlParams?.term?.toString() || 'unknown',
+        interest_rate: urlParams?.rate?.toString() || 'unknown',
+        error_message: getErrorMessage(error),
+      })
     }
   }
 
@@ -283,9 +362,7 @@ export const DynamicMortgagePage: React.FC = () => {
               Simulation Error
             </Typography>
             <Typography variant="body2">
-              {simulationMutation.error instanceof Error
-                ? simulationMutation.error.message
-                : 'An unexpected error occurred. Please try again.'}
+              {getErrorMessage(simulationMutation.error)}
             </Typography>
           </Alert>
         )}
