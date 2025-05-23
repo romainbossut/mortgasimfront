@@ -136,7 +136,11 @@ export const convertOverpaymentsToApiFormat = (data: MortgageFormData): string |
     return undefined
   }
   
-  if (data.overpayment_type === 'regular' && data.regular_overpayment_amount && data.regular_overpayment_months) {
+  if (data.overpayment_type === 'regular') {
+    if (!data.regular_overpayment_amount || !data.regular_overpayment_months) {
+      return undefined
+    }
+    
     // Convert regular overpayments to month:amount format
     const overpayments: string[] = []
     for (let i = 1; i <= data.regular_overpayment_months; i++) {
@@ -145,10 +149,22 @@ export const convertOverpaymentsToApiFormat = (data: MortgageFormData): string |
     return overpayments.join(',')
   }
   
-  if (data.overpayment_type === 'custom' && data.custom_overpayments && data.custom_overpayments.length > 0) {
+  if (data.overpayment_type === 'custom') {
+    if (!data.custom_overpayments || data.custom_overpayments.length === 0) {
+      return undefined
+    }
+    
     // Convert custom overpayments to month:amount format
-    return data.custom_overpayments
-      .filter(op => op.month > 0 && op.amount > 0)
+    const validOverpayments = data.custom_overpayments.filter(op => op.month > 0 && op.amount > 0)
+    
+    if (validOverpayments.length === 0) {
+      return undefined
+    }
+    
+    // Sort by month to ensure proper order
+    validOverpayments.sort((a, b) => a.month - b.month)
+    
+    return validOverpayments
       .map(op => `${op.month}:${op.amount}`)
       .join(',')
   }
