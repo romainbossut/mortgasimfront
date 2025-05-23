@@ -30,7 +30,7 @@ export const Footer: React.FC = () => {
             }}
           >
             <Copyright sx={{ fontSize: '1rem' }} />
-            {currentYear} Mortgage Simulation Tool. All rights reserved.
+            {currentYear} Romain Bossut. All rights reserved.
           </Typography>
           
           <Typography 
