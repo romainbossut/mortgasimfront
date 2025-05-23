@@ -29,8 +29,7 @@ import {
   mortgageFormSchema, 
   defaultFormValues,
   saveFormDataToStorage,
-  loadFormDataFromStorage,
-  clearFormDataFromStorage
+  loadFormDataFromStorage
 } from '../utils/validation'
 import type { MortgageFormData } from '../utils/validation'
 
@@ -133,12 +132,6 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
 
   const removeCustomOverpayment = (index: number) => {
     remove(index)
-  }
-
-  // Clear stored data function (for debugging or reset)
-  const handleClearStoredData = () => {
-    clearFormDataFromStorage()
-    console.log('Stored form data cleared')
   }
 
   return (
