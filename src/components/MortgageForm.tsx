@@ -47,9 +47,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   initialValues,
 }) => {
   // Use initialValues if provided (from URL), otherwise use defaults
-  console.log('MortgageForm received initialValues:', initialValues)
   const formValues = initialValues || defaultFormValues
-  console.log('MortgageForm using formValues:', formValues)
   
   const [lastSimulatedValues, setLastSimulatedValues] = useState<MortgageFormData | null>(null)
   const [shareSnackbar, setShareSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -58,8 +56,6 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
     severity: 'success'
   })
 
-  console.log('useForm defaultValues:', formValues)
-  
   const {
     control,
     handleSubmit,
@@ -76,7 +72,6 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   useEffect(() => {
     if (initialValues && Object.keys(initialValues).length > 0) {
       // initialValues is already merged with defaults in DynamicMortgagePage
-      console.log('Resetting form with initialValues:', initialValues)
       reset(initialValues)
     }
   }, [initialValues, reset])

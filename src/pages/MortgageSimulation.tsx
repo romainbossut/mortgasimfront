@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { track } from '@vercel/analytics'
 import {
@@ -13,7 +12,6 @@ import {
   Card,
   CardContent,
   Paper,
-  Snackbar,
 } from '@mui/material'
 import {
   CheckCircle,
@@ -21,14 +19,11 @@ import {
   FileDownload,
   CloudOff,
   TrendingUp,
-  Share,
 } from '@mui/icons-material'
 import { MortgageForm } from '../components/MortgageForm'
 import { MortgageCharts } from '../components/MortgageCharts'
 import { Footer } from '../components/Footer'
 import { MortgageApiService, transformFormDataToRequest } from '../services/mortgageApi'
-import { decodeFormDataFromUrl, generateShareableLink, copyToClipboard } from '../utils/urlParser'
-import { defaultFormValues } from '../utils/validation'
 import type { MortgageFormData } from '../utils/validation'
 import type { SimulationResponse, SimulationRequest } from '../types/mortgage'
 
@@ -44,56 +39,11 @@ const getErrorMessage = (error: unknown): string => {
 }
 
 export const MortgageSimulation: React.FC = () => {
-  const [searchParams] = useSearchParams()
   const [simulationResults, setSimulationResults] = useState<SimulationResponse | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
   const [currentStartDate, setCurrentStartDate] = useState<string>('')
   const [lastSimulationRequest, setLastSimulationRequest] = useState<SimulationRequest | null>(null)
   const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
-  const [shareSnackbar, setShareSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
-    open: false,
-    message: '',
-    severity: 'success'
-  })
-
-  // Parse URL parameters
-  const urlParams = useMemo(() => {
-    console.log('=== URL PARSING START (MortgageSimulation) ===')
-    console.log('Current URL:', window.location.href)
-    console.log('SearchParams object:', searchParams)
-    console.log('SearchParams toString:', searchParams.toString())
-    
-    const comprehensiveParams = decodeFormDataFromUrl(searchParams)
-    console.log('Comprehensive params:', comprehensiveParams)
-    console.log('=== URL PARSING END ===')
-    return comprehensiveParams
-  }, [searchParams])
-
-  // Check if we have actual URL parameters (not empty object)
-  const hasUrlParams = urlParams && Object.keys(urlParams).length > 0
-
-  // Generate pre-filled form data
-  const preFilledFormData = useMemo(() => {
-    console.log('URL params for form:', urlParams)
-    console.log('Has URL params:', hasUrlParams)
-    
-    if (!hasUrlParams) {
-      console.log('No URL params - using default form values')
-      return undefined // Let form use its own defaults
-    }
-
-    // Filter out undefined values before merging
-    const filteredUrlParams = Object.fromEntries(
-      Object.entries(urlParams).filter(([, value]) => value !== undefined)
-    )
-
-    const merged = {
-      ...defaultFormValues,
-      ...filteredUrlParams,
-    }
-    console.log('Pre-filled form data with URL params:', merged)
-    return merged
-  }, [urlParams, hasUrlParams])
 
   // Track home page visits
   useEffect(() => {
@@ -145,10 +95,10 @@ export const MortgageSimulation: React.FC = () => {
     refetchInterval: 300000, // 5 minutes
   })
 
-  // Auto-load sample data on component mount (only if no URL params)
+  // Auto-load sample data on component mount
   useEffect(() => {
     const loadSampleData = async () => {
-      if (!hasAutoLoaded && !hasUrlParams) {
+      if (!hasAutoLoaded) {
         try {
           const sampleData = await sampleQuery.refetch()
           if (sampleData.data) {
@@ -166,32 +116,7 @@ export const MortgageSimulation: React.FC = () => {
     }
 
     loadSampleData()
-  }, [hasAutoLoaded, hasUrlParams, sampleQuery, simulationMutation])
-
-  // Auto-run simulation with URL parameters
-  useEffect(() => {
-    const runInitialSimulation = async () => {
-      if (!hasAutoLoaded && hasUrlParams && preFilledFormData) {
-        try {
-          const today = new Date().toISOString().split('T')[0]
-          setCurrentStartDate(today)
-          
-          const request = transformFormDataToRequest({
-            ...preFilledFormData,
-            start_date: today,
-          })
-          
-          setLastSimulationRequest(request)
-          simulationMutation.mutate(request)
-          setHasAutoLoaded(true)
-        } catch (error) {
-          console.error('Failed to auto-load URL simulation:', error)
-        }
-      }
-    }
-
-    runInitialSimulation()
-  }, [hasAutoLoaded, hasUrlParams, preFilledFormData, simulationMutation])
+  }, [hasAutoLoaded, sampleQuery, simulationMutation])
 
   const handleFormSubmit = (formData: MortgageFormData) => {
     setCurrentStartDate(formData.start_date) // Store the start date
@@ -247,37 +172,7 @@ export const MortgageSimulation: React.FC = () => {
     }
   }
 
-  const handleShareLink = async () => {
-    try {
-      const shareableLink = generateShareableLink(preFilledFormData || defaultFormValues)
-      const success = await copyToClipboard(shareableLink)
-      
-      if (success) {
-        setShareSnackbar({
-          open: true,
-          message: 'Share link copied to clipboard!',
-          severity: 'success'
-        })
-      } else {
-        setShareSnackbar({
-          open: true,
-          message: 'Failed to copy to clipboard. Please try again.',
-          severity: 'error'
-        })
-      }
-    } catch (error) {
-      console.error('Failed to generate share link:', error)
-      setShareSnackbar({
-        open: true,
-        message: 'Failed to generate share link.',
-        severity: 'error'
-      })
-    }
-  }
 
-  const handleCloseSnackbar = () => {
-    setShareSnackbar(prev => ({ ...prev, open: false }))
-  }
 
   const getApiStatusChip = () => {
     if (healthQuery.isLoading) {
@@ -378,7 +273,6 @@ export const MortgageSimulation: React.FC = () => {
             <MortgageForm
               onSubmit={handleFormSubmit}
               isLoading={simulationMutation.isPending}
-              initialValues={hasUrlParams ? preFilledFormData : undefined}
             />
           </Box>
 
@@ -412,24 +306,8 @@ export const MortgageSimulation: React.FC = () => {
 
             {simulationResults && !simulationMutation.isPending && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* Export and Share Buttons */}
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                  <Button
-                    onClick={handleShareLink}
-                    startIcon={<Share />}
-                    variant="outlined"
-                    size="small"
-                    sx={{ 
-                      borderColor: 'primary.main',
-                      color: 'primary.main',
-                      '&:hover': {
-                        backgroundColor: 'primary.50',
-                        borderColor: 'primary.dark',
-                      }
-                    }}
-                  >
-                    Share Link
-                  </Button>
+                {/* Export Button */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                   <Button
                     onClick={handleExportCsv}
                     startIcon={<FileDownload />}
@@ -501,23 +379,6 @@ export const MortgageSimulation: React.FC = () => {
       </Container>
 
       <Footer />
-
-      {/* Share Feedback Snackbar */}
-      <Snackbar
-        open={shareSnackbar.open}
-        autoHideDuration={4000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={handleCloseSnackbar} 
-          severity={shareSnackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {shareSnackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   )
 } 
