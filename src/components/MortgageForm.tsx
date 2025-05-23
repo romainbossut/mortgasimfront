@@ -20,9 +20,6 @@ import {
   MenuItem,
   InputLabel,
 } from '@mui/material'
-import { DatePicker } from '@mui/x-date-pickers/DatePicker'
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import {
   Calculate,
   AccountBalance,
@@ -55,6 +52,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
     handleSubmit,
     formState: { errors },
     watch,
+    setValue,
   } = useForm<MortgageFormData>({
     resolver: zodResolver(mortgageFormSchema),
     defaultValues: formValues,
@@ -114,16 +112,18 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               name="start_date"
               control={control}
               render={({ field }) => (
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
-                  <DatePicker
-                    {...field}
-                    label="Start Date"
-                    onChange={(newValue) => {
-                      field.onChange(newValue);
-                    }}
-                    renderInput={(params) => <TextField {...params} />}
-                  />
-                </LocalizationProvider>
+                <TextField
+                  {...field}
+                  label="Start Date"
+                  type="date"
+                  error={!!errors.start_date}
+                  helperText={errors.start_date?.message || 'All projections will be calculated from this date'}
+                  fullWidth
+                  size="small"
+                  InputLabelProps={{
+                    shrink: true,
+                  }}
+                />
               )}
             />
           </Paper>
@@ -496,46 +496,44 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                       }
                     }}
                   >
-                    {/* Compact Month/Year Selector */}
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-                      <FormControl size="small" sx={{ minWidth: 100 }}>
-                        <InputLabel>Month</InputLabel>
-                        <Controller
-                          name={`custom_overpayments.${index}.month`}
-                          control={control}
-                          render={({ field: monthField }) => (
-                            <Select
-                              {...monthField}
-                              label="Month"
-                              error={!!errors.custom_overpayments?.[index]?.month}
-                            >
-                              {Array.from({ length: 12 }, (_, i) => (
-                                <MenuItem key={i + 1} value={i + 1}>
-                                  {getMonthName(i + 1).substring(0, 3)}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          )}
-                        />
-                      </FormControl>
-                      
-                      <Controller
-                        name={`custom_overpayments.${index}.year`}
-                        control={control}
-                        render={({ field: yearField }) => (
+                    {/* Month/Year Date Input */}
+                    <Controller
+                      name={`custom_overpayments.${index}.month`}
+                      control={control}
+                      render={({ field: monthField }) => {
+                        const currentMonth = currentValues.custom_overpayments?.[index]?.month || 1
+                        const currentYear = currentValues.custom_overpayments?.[index]?.year || new Date().getFullYear()
+                        const monthValue = `${currentYear}-${String(currentMonth).padStart(2, '0')}`
+                        
+                        return (
                           <TextField
-                            {...yearField}
-                            onChange={(e) => yearField.onChange(e.target.value ? Number(e.target.value) : '')}
-                            label="Year"
-                            type="number"
-                            error={!!errors.custom_overpayments?.[index]?.year}
-                            inputProps={{ min: 2020, max: 2050 }}
+                            type="month"
+                            label="Month/Year"
                             size="small"
-                            sx={{ width: 80 }}
+                            sx={{ minWidth: 140 }}
+                            value={monthValue}
+                            onChange={(e) => {
+                              const [year, month] = e.target.value.split('-')
+                              if (year && month) {
+                                monthField.onChange(parseInt(month))
+                                setValue(`custom_overpayments.${index}.year` as any, parseInt(year))
+                              }
+                            }}
+                            error={!!errors.custom_overpayments?.[index]?.month || !!errors.custom_overpayments?.[index]?.year}
+                            InputLabelProps={{
+                              shrink: true,
+                            }}
                           />
-                        )}
-                      />
-                    </Box>
+                        )
+                      }}
+                    />
+                    
+                    {/* Hidden Year Field */}
+                    <Controller
+                      name={`custom_overpayments.${index}.year`}
+                      control={control}
+                      render={() => <div style={{ display: 'none' }} />}
+                    />
                     
                     {/* Amount Field */}
                     <Controller
