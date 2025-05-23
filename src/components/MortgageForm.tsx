@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState } from 'react'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
@@ -14,6 +14,8 @@ import {
   FormControlLabel,
   Radio,
   IconButton,
+  Snackbar,
+  Alert,
 } from '@mui/material'
 import {
   Calculate,
@@ -24,13 +26,13 @@ import {
   Add,
   Delete,
   PaymentOutlined,
+  Share,
 } from '@mui/icons-material'
 import { 
   mortgageFormSchema, 
-  defaultFormValues,
-  saveFormDataToStorage,
-  loadFormDataFromStorage
+  defaultFormValues
 } from '../utils/validation'
+import { generateShareableLink, copyToClipboard } from '../utils/urlParser'
 import type { MortgageFormData } from '../utils/validation'
 
 interface MortgageFormProps {
@@ -44,21 +46,15 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   isLoading = false,
   initialValues,
 }) => {
-  // Determine form values: initialValues take precedence over stored data
-  const getInitialFormValues = useCallback(() => {
-    if (initialValues) {
-      // If initialValues are provided, use them (e.g., from URL parameters)
-      return { ...defaultFormValues, ...initialValues }
-    } else {
-      // Try to load from localStorage, fallback to defaults
-      const storedData = loadFormDataFromStorage()
-      return storedData ? { ...defaultFormValues, ...storedData } : defaultFormValues
-    }
-  }, [initialValues])
-
-  const formValues = getInitialFormValues()
+  // Use initialValues if provided, otherwise use defaults
+  const formValues = initialValues ? { ...defaultFormValues, ...initialValues } : defaultFormValues
+  
   const [lastSimulatedValues, setLastSimulatedValues] = useState<MortgageFormData | null>(null)
-  const [saveTimeoutId, setSaveTimeoutId] = useState<NodeJS.Timeout | null>(null)
+  const [shareSnackbar, setShareSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  })
 
   const {
     control,
@@ -80,38 +76,6 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   // Watch all form values to detect changes
   const currentValues = watch()
 
-  // Debounced save to localStorage
-  const debouncedSave = useCallback((data: MortgageFormData) => {
-    // Clear existing timeout
-    if (saveTimeoutId) {
-      clearTimeout(saveTimeoutId)
-    }
-
-    // Set new timeout
-    const timeoutId = setTimeout(() => {
-      // Only save if no initialValues were provided (user's own data)
-      if (!initialValues) {
-        saveFormDataToStorage(data)
-      }
-    }, 1000) // Save after 1 second of inactivity
-
-    setSaveTimeoutId(timeoutId)
-  }, [saveTimeoutId, initialValues])
-
-  // Save form data when values change
-  useEffect(() => {
-    if (currentValues && Object.keys(currentValues).length > 0) {
-      debouncedSave(currentValues)
-    }
-
-    // Cleanup timeout on unmount
-    return () => {
-      if (saveTimeoutId) {
-        clearTimeout(saveTimeoutId)
-      }
-    }
-  }, [currentValues, debouncedSave])
-
   // Check if current form values differ from last simulated values
   const hasFormChanged = lastSimulatedValues ? 
     JSON.stringify(currentValues) !== JSON.stringify(lastSimulatedValues) : 
@@ -132,6 +96,38 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
 
   const removeCustomOverpayment = (index: number) => {
     remove(index)
+  }
+
+  const handleShareLink = async () => {
+    try {
+      const shareableLink = generateShareableLink(currentValues)
+      const success = await copyToClipboard(shareableLink)
+      
+      if (success) {
+        setShareSnackbar({
+          open: true,
+          message: 'Share link copied to clipboard!',
+          severity: 'success'
+        })
+      } else {
+        setShareSnackbar({
+          open: true,
+          message: 'Failed to copy to clipboard. Please try again.',
+          severity: 'error'
+        })
+      }
+    } catch (error) {
+      console.error('Failed to generate share link:', error)
+      setShareSnackbar({
+        open: true,
+        message: 'Failed to generate share link.',
+        severity: 'error'
+      })
+    }
+  }
+
+  const handleCloseSnackbar = () => {
+    setShareSnackbar(prev => ({ ...prev, open: false }))
   }
 
   return (
@@ -624,26 +620,67 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
             )}
           </Paper>
 
-          {/* Run Simulation Button */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 2 }}>
-            <Button
-              onClick={handleSubmit(handleFormSubmit)}
-              variant="contained"
-              size="large"
-              disabled={!isButtonEnabled}
-              startIcon={<Calculate />}
-              sx={{ 
-                minWidth: 200,
-                py: 1.5,
-                fontSize: '1.1rem',
-                fontWeight: 600,
-              }}
-            >
-              {isLoading ? 'Running Simulation...' : 'Run Simulation'}
-            </Button>
+          {/* Action Buttons */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+            {/* Share Link Button */}
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Button
+                onClick={handleShareLink}
+                variant="outlined"
+                size="medium"
+                startIcon={<Share />}
+                sx={{ 
+                  minWidth: 200,
+                  borderColor: 'primary.main',
+                  color: 'primary.main',
+                  '&:hover': {
+                    backgroundColor: 'primary.50',
+                    borderColor: 'primary.dark',
+                  }
+                }}
+              >
+                Share Link
+              </Button>
+            </Box>
+
+            {/* Run Simulation Button */}
+            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+              <Button
+                onClick={handleSubmit(handleFormSubmit)}
+                variant="contained"
+                size="large"
+                disabled={!isButtonEnabled}
+                startIcon={<Calculate />}
+                sx={{ 
+                  minWidth: 200,
+                  py: 1.5,
+                  fontSize: '1.1rem',
+                  fontWeight: 600,
+                }}
+              >
+                {isLoading ? 'Running Simulation...' : 'Run Simulation'}
+              </Button>
+            </Box>
           </Box>
         </Box>
       </CardContent>
+
+      {/* Share Feedback Snackbar */}
+      <Snackbar
+        open={shareSnackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={shareSnackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {shareSnackbar.message}
+        </Alert>
+      </Snackbar>
     </Card>
   )
 }

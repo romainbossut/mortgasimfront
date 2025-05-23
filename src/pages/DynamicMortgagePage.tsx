@@ -13,6 +13,7 @@ import {
   Card,
   CardContent,
   Paper,
+  Snackbar,
 } from '@mui/material'
 import {
   CheckCircle,
@@ -20,12 +21,13 @@ import {
   FileDownload,
   CloudOff,
   TrendingUp,
+  Share,
 } from '@mui/icons-material'
 import { MortgageForm } from '../components/MortgageForm'
 import { MortgageCharts } from '../components/MortgageCharts'
 import { Footer } from '../components/Footer'
 import { MortgageApiService, transformFormDataToRequest } from '../services/mortgageApi'
-import { parseMortgageSlug, parseMortgageQuery } from '../utils/urlParser'
+import { parseMortgageSlug, parseMortgageQuery, decodeFormDataFromUrl, generateShareableLink, copyToClipboard } from '../utils/urlParser'
 import { defaultFormValues } from '../utils/validation'
 import type { MortgageFormData } from '../utils/validation'
 import type { SimulationResponse, SimulationRequest } from '../types/mortgage'
@@ -49,46 +51,75 @@ export const DynamicMortgagePage: React.FC = () => {
   const [currentStartDate, setCurrentStartDate] = useState<string>('')
   const [lastSimulationRequest, setLastSimulationRequest] = useState<SimulationRequest | null>(null)
   const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
+  const [shareSnackbar, setShareSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  })
 
-  // Parse URL parameters
+  // Parse URL parameters - first try comprehensive URL decoding, fallback to legacy parsing
   const urlParams = useMemo(() => {
-    if (slug) {
-      return parseMortgageSlug(slug)
+    // Try comprehensive URL parameter decoding first
+    const comprehensiveParams = decodeFormDataFromUrl(searchParams)
+    if (Object.keys(comprehensiveParams).length > 0) {
+      return comprehensiveParams
     }
-    return parseMortgageQuery(searchParams)
+    
+    // Fallback to legacy parsing for backwards compatibility
+    if (slug) {
+      const legacyParams = parseMortgageSlug(slug)
+      if (legacyParams) {
+        return {
+          mortgage_amount: legacyParams.loan,
+          term_years: legacyParams.term,
+          fixed_rate: legacyParams.rate,
+          variable_rate: legacyParams.rate,
+        }
+      }
+    } else {
+      const legacyParams = parseMortgageQuery(searchParams)
+      if (Object.keys(legacyParams).length > 0) {
+        return {
+          mortgage_amount: legacyParams.loan,
+          term_years: legacyParams.term,
+          fixed_rate: legacyParams.rate,
+          variable_rate: legacyParams.rate,
+        }
+      }
+    }
+    
+    return {}
   }, [slug, searchParams])
 
   // Track page visits for dynamic mortgage pages
   useEffect(() => {
-    if (urlParams) {
+    if (Object.keys(urlParams).length > 0) {
       track('mortgage_page_visit', {
-        loan_amount: urlParams.loan?.toString() || 'unknown',
-        term_years: urlParams.term?.toString() || 'unknown',
-        interest_rate: urlParams.rate?.toString() || 'unknown',
+        loan_amount: urlParams.mortgage_amount?.toString() || 'unknown',
+        term_years: urlParams.term_years?.toString() || 'unknown',
+        interest_rate: urlParams.fixed_rate?.toString() || 'unknown',
         url_format: slug ? 'slug' : 'query',
         page_url: window.location.pathname,
+        is_comprehensive_params: Object.keys(urlParams).length > 3,
       })
     }
   }, [urlParams, slug])
 
   // Generate pre-filled form data
   const preFilledFormData = useMemo(() => {
-    if (!urlParams || (!urlParams.loan && !urlParams.term && !urlParams.rate)) {
+    if (!urlParams || Object.keys(urlParams).length === 0) {
       return defaultFormValues
     }
 
     return {
       ...defaultFormValues,
-      mortgage_amount: urlParams.loan || defaultFormValues.mortgage_amount,
-      term_years: urlParams.term || defaultFormValues.term_years,
-      fixed_rate: urlParams.rate || defaultFormValues.fixed_rate,
-      variable_rate: urlParams.rate || defaultFormValues.variable_rate,
+      ...urlParams,
     }
   }, [urlParams])
 
   // SEO metadata
   const seoData = useMemo(() => {
-    if (!urlParams) {
+    if (!urlParams || Object.keys(urlParams).length === 0) {
       return {
         title: 'Mortgage Calculator - MortgaSim',
         description: 'Calculate your mortgage payments with our advanced mortgage simulation tool.',
@@ -97,10 +128,10 @@ export const DynamicMortgagePage: React.FC = () => {
       }
     }
 
-    const { loan, term, rate } = urlParams
-    const loanFormatted = loan ? `£${(loan / 1000).toFixed(0)}k` : ''
-    const termFormatted = term ? `${term} years` : ''
-    const rateFormatted = rate ? `${rate}%` : ''
+    const { mortgage_amount, term_years, fixed_rate } = urlParams
+    const loanFormatted = mortgage_amount ? `£${(mortgage_amount / 1000).toFixed(0)}k` : ''
+    const termFormatted = term_years ? `${term_years} years` : ''
+    const rateFormatted = fixed_rate ? `${fixed_rate}%` : ''
 
     const title = `${loanFormatted} Mortgage over ${termFormatted} at ${rateFormatted} - MortgaSim`
     const description = `Calculate monthly payments for a ${loanFormatted} mortgage over ${termFormatted} at ${rateFormatted} interest rate. See total cost, savings growth, and net worth projections.`
@@ -144,14 +175,14 @@ export const DynamicMortgagePage: React.FC = () => {
     ogDescription.setAttribute('content', seoData.ogDescription)
 
     // Add OG image if we have URL params
-    if (urlParams) {
+    if (urlParams && Object.keys(urlParams).length > 0) {
       let ogImage = document.querySelector('meta[property="og:image"]')
       if (!ogImage) {
         ogImage = document.createElement('meta')
         ogImage.setAttribute('property', 'og:image')
         document.head.appendChild(ogImage)
       }
-      ogImage.setAttribute('content', `/api/og-image?loan=${urlParams.loan}&term=${urlParams.term}&rate=${urlParams.rate}`)
+      ogImage.setAttribute('content', `/api/og-image?loan=${urlParams.mortgage_amount}&term=${urlParams.term_years}&rate=${urlParams.fixed_rate}`)
     }
   }, [seoData, urlParams])
 
@@ -164,9 +195,9 @@ export const DynamicMortgagePage: React.FC = () => {
       
       // Track successful simulation
       track('mortgage_simulation_completed', {
-        loan_amount: urlParams?.loan?.toString() || 'unknown',
-        term_years: urlParams?.term?.toString() || 'unknown',
-        interest_rate: urlParams?.rate?.toString() || 'unknown',
+        loan_amount: urlParams?.mortgage_amount?.toString() || 'unknown',
+        term_years: urlParams?.term_years?.toString() || 'unknown',
+        interest_rate: urlParams?.fixed_rate?.toString() || 'unknown',
         has_warnings: (data.warnings || []).length > 0,
         warnings_count: (data.warnings || []).length,
         auto_loaded: hasAutoLoaded,
@@ -177,9 +208,9 @@ export const DynamicMortgagePage: React.FC = () => {
       
       // Track simulation errors
       track('mortgage_simulation_error', {
-        loan_amount: urlParams?.loan?.toString() || 'unknown',
-        term_years: urlParams?.term?.toString() || 'unknown',
-        interest_rate: urlParams?.rate?.toString() || 'unknown',
+        loan_amount: urlParams?.mortgage_amount?.toString() || 'unknown',
+        term_years: urlParams?.term_years?.toString() || 'unknown',
+        interest_rate: urlParams?.fixed_rate?.toString() || 'unknown',
         error_message: getErrorMessage(error),
         auto_loaded: hasAutoLoaded,
       })
@@ -244,9 +275,9 @@ export const DynamicMortgagePage: React.FC = () => {
     try {
       // Track CSV export attempt
       track('csv_export_started', {
-        loan_amount: urlParams?.loan?.toString() || 'unknown',
-        term_years: urlParams?.term?.toString() || 'unknown',
-        interest_rate: urlParams?.rate?.toString() || 'unknown',
+        loan_amount: urlParams?.mortgage_amount?.toString() || 'unknown',
+        term_years: urlParams?.term_years?.toString() || 'unknown',
+        interest_rate: urlParams?.fixed_rate?.toString() || 'unknown',
       })
       
       const csvBlob = await MortgageApiService.exportCsv(lastSimulationRequest)
@@ -262,9 +293,9 @@ export const DynamicMortgagePage: React.FC = () => {
       
       // Track successful CSV export
       track('csv_export_completed', {
-        loan_amount: urlParams?.loan?.toString() || 'unknown',
-        term_years: urlParams?.term?.toString() || 'unknown',
-        interest_rate: urlParams?.rate?.toString() || 'unknown',
+        loan_amount: urlParams?.mortgage_amount?.toString() || 'unknown',
+        term_years: urlParams?.term_years?.toString() || 'unknown',
+        interest_rate: urlParams?.fixed_rate?.toString() || 'unknown',
         file_size: csvBlob.size.toString(),
       })
     } catch (error) {
@@ -272,12 +303,44 @@ export const DynamicMortgagePage: React.FC = () => {
       
       // Track CSV export error
       track('csv_export_error', {
-        loan_amount: urlParams?.loan?.toString() || 'unknown',
-        term_years: urlParams?.term?.toString() || 'unknown',
-        interest_rate: urlParams?.rate?.toString() || 'unknown',
+        loan_amount: urlParams?.mortgage_amount?.toString() || 'unknown',
+        term_years: urlParams?.term_years?.toString() || 'unknown',
+        interest_rate: urlParams?.fixed_rate?.toString() || 'unknown',
         error_message: getErrorMessage(error),
       })
     }
+  }
+
+  const handleShareLink = async () => {
+    try {
+      const shareableLink = generateShareableLink(preFilledFormData)
+      const success = await copyToClipboard(shareableLink)
+      
+      if (success) {
+        setShareSnackbar({
+          open: true,
+          message: 'Share link copied to clipboard!',
+          severity: 'success'
+        })
+      } else {
+        setShareSnackbar({
+          open: true,
+          message: 'Failed to copy to clipboard. Please try again.',
+          severity: 'error'
+        })
+      }
+    } catch (error) {
+      console.error('Failed to generate share link:', error)
+      setShareSnackbar({
+        open: true,
+        message: 'Failed to generate share link.',
+        severity: 'error'
+      })
+    }
+  }
+
+  const handleCloseSnackbar = () => {
+    setShareSnackbar(prev => ({ ...prev, open: false }))
   }
 
   const getApiStatusChip = () => {
@@ -413,8 +476,24 @@ export const DynamicMortgagePage: React.FC = () => {
 
             {simulationResults && !simulationMutation.isPending && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-                {/* Export Button */}
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                {/* Export and Share Buttons */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
+                  <Button
+                    onClick={handleShareLink}
+                    startIcon={<Share />}
+                    variant="outlined"
+                    size="small"
+                    sx={{ 
+                      borderColor: 'primary.main',
+                      color: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.50',
+                        borderColor: 'primary.dark',
+                      }
+                    }}
+                  >
+                    Share Link
+                  </Button>
                   <Button
                     onClick={handleExportCsv}
                     startIcon={<FileDownload />}
@@ -477,6 +556,23 @@ export const DynamicMortgagePage: React.FC = () => {
       </Container>
 
       <Footer />
+
+      {/* Share Feedback Snackbar */}
+      <Snackbar
+        open={shareSnackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={shareSnackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {shareSnackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 } 
