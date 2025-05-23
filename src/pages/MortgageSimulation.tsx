@@ -29,8 +29,8 @@ import type { SimulationResponse, SimulationRequest } from '../types/mortgage'
 
 // Utility function to safely extract error messages
 const getErrorMessage = (error: unknown): string => {
-  if (error instanceof Error) {
-    return (error as Error).message
+  if (error && typeof error === 'object' && 'message' in error) {
+    return String((error as { message: unknown }).message)
   }
   if (typeof error === 'string') {
     return error
