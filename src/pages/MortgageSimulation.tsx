@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material'
 import { MortgageForm } from '../components/MortgageForm'
 import { MortgageCharts } from '../components/MortgageCharts'
+import { Footer } from '../components/Footer'
 import { MortgageApiService, transformFormDataToRequest } from '../services/mortgageApi'
 import type { MortgageFormData } from '../utils/validation'
 import type { SimulationResponse, SimulationRequest } from '../types/mortgage'
@@ -171,27 +172,6 @@ export const MortgageSimulation: React.FC = () => {
       </Paper>
 
       <Container maxWidth="xl" sx={{ py: 4 }}>
-        {/* Warnings */}
-        {warnings.length > 0 && (
-          <Alert 
-            severity="warning" 
-            icon={<Warning />}
-            sx={{ mb: 3 }}
-            elevation={1}
-          >
-            <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
-              Simulation Warnings
-            </Typography>
-            <Box component="ul" sx={{ m: 0, pl: 2 }}>
-              {warnings.map((warning, index) => (
-                <Typography component="li" variant="body2" key={index}>
-                  {warning}
-                </Typography>
-              ))}
-            </Box>
-          </Alert>
-        )}
-
         {/* Error Display */}
         {simulationMutation.isError && (
           <Alert 
@@ -282,6 +262,7 @@ export const MortgageSimulation: React.FC = () => {
                   chartData={simulationResults.chart_data}
                   summaryStats={simulationResults.summary_statistics}
                   startDate={currentStartDate}
+                  notes={warnings.length > 0 ? warnings : undefined}
                   isLoading={false}
                 />
               </Box>
@@ -327,6 +308,8 @@ export const MortgageSimulation: React.FC = () => {
           </Box>
         </Box>
       </Container>
+
+      <Footer />
     </Box>
   )
 } 

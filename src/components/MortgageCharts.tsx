@@ -6,14 +6,17 @@ import {
   Typography,
   CircularProgress,
   Chip,
+  Alert,
 } from '@mui/material'
 import { LineChart } from '@mui/x-charts/LineChart'
+import { InfoOutlined } from '@mui/icons-material'
 import type { ChartData, SummaryStatistics } from '../types/mortgage'
 
 interface MortgageChartsProps {
   chartData: ChartData
   summaryStats: SummaryStatistics
   startDate: string // Start date in YYYY-MM-DD format
+  notes?: string[] // Notes/warnings to display under summary
   isLoading?: boolean
 }
 
@@ -21,6 +24,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
   chartData,
   summaryStats,
   startDate,
+  notes,
   isLoading = false,
 }) => {
   // Format currency for display
@@ -236,6 +240,32 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
                 variant="outlined"
                 sx={{ fontSize: '0.875rem' }}
               />
+            </Box>
+          )}
+
+          {notes && notes.length > 0 && (
+            <Box sx={{ mt: 2 }}>
+              <Alert 
+                severity="info" 
+                icon={<InfoOutlined />}
+                sx={{ 
+                  textAlign: 'left',
+                  '& .MuiAlert-message': {
+                    width: '100%'
+                  }
+                }}
+              >
+                <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
+                  Notes
+                </Typography>
+                <Box component="ul" sx={{ m: 0, pl: 2 }}>
+                  {notes.map((note, index) => (
+                    <Typography component="li" variant="body2" key={index} sx={{ mb: 0.5 }}>
+                      {note}
+                    </Typography>
+                  ))}
+                </Box>
+              </Alert>
             </Box>
           )}
         </CardContent>
