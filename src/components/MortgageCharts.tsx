@@ -9,6 +9,8 @@ import {
   Alert,
 } from '@mui/material'
 import { LineChart } from '@mui/x-charts/LineChart'
+import { DataGrid } from '@mui/x-data-grid'
+import type { GridColDef } from '@mui/x-data-grid'
 import { InfoOutlined } from '@mui/icons-material'
 import type { ChartData, SummaryStatistics } from '../types/mortgage'
 
@@ -88,6 +90,107 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
       </Box>
     )
   }
+
+  // Create summary table data for specific years
+  const summaryTableData = useMemo(() => {
+    if (!chartData || chartData.years.length === 0) {
+      return []
+    }
+
+    const targetYears = [1, 2, 3, 4, 5, 10]
+    const tableRows: Array<{
+      id: number
+      year: number
+      date: string
+      mortgageBalance: number
+      savingsBalance: number
+      netWorth: number
+      monthlyPayment: number
+    }> = []
+
+    targetYears.forEach((targetYear, index) => {
+      // Find the closest data point to the target year
+      let closestIndex = 0
+      let minDiff = Math.abs(chartData.years[0] - targetYear)
+      
+      for (let i = 1; i < chartData.years.length; i++) {
+        const diff = Math.abs(chartData.years[i] - targetYear)
+        if (diff < minDiff) {
+          minDiff = diff
+          closestIndex = i
+        }
+      }
+
+      // Only include if we have data reasonably close to the target year (within 6 months)
+      if (minDiff <= 0.5) {
+        const baseDate = new Date(startDate)
+        const targetDate = new Date(baseDate)
+        targetDate.setMonth(targetDate.getMonth() + Math.round(targetYear * 12))
+
+        tableRows.push({
+          id: index + 1,
+          year: targetYear,
+          date: targetDate.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
+          mortgageBalance: chartData.mortgage_balance[closestIndex],
+          savingsBalance: chartData.savings_balance[closestIndex],
+          netWorth: chartData.net_worth[closestIndex],
+          monthlyPayment: chartData.monthly_payments[closestIndex],
+        })
+      }
+    })
+
+    return tableRows
+  }, [chartData, startDate])
+
+  // Define columns for the summary table
+  const summaryTableColumns: GridColDef[] = [
+    {
+      field: 'year',
+      headerName: 'Year',
+      width: 80,
+      align: 'center',
+      headerAlign: 'center',
+    },
+    {
+      field: 'date',
+      headerName: 'Date',
+      width: 100,
+      align: 'center',
+      headerAlign: 'center',
+    },
+    {
+      field: 'mortgageBalance',
+      headerName: 'Mortgage Balance',
+      width: 140,
+      align: 'right',
+      headerAlign: 'center',
+      valueFormatter: (value: number) => formatCurrency(value),
+    },
+    {
+      field: 'savingsBalance',
+      headerName: 'Savings Balance',
+      width: 140,
+      align: 'right',
+      headerAlign: 'center',
+      valueFormatter: (value: number) => formatCurrency(value),
+    },
+    {
+      field: 'netWorth',
+      headerName: 'Net Worth',
+      width: 140,
+      align: 'right',
+      headerAlign: 'center',
+      valueFormatter: (value: number) => formatCurrency(value),
+    },
+    {
+      field: 'monthlyPayment',
+      headerName: 'Monthly Payment',
+      width: 140,
+      align: 'right',
+      headerAlign: 'center',
+      valueFormatter: (value: number) => formatCurrency(value),
+    },
+  ]
 
   // Convert data for charts with actual dates
   const processedData = useMemo(() => {
@@ -295,6 +398,43 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Enhanced Summary Table */}
+      {summaryTableData.length > 0 && (
+        <Card elevation={3}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+              Financial Position at Key Years
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              View your mortgage balance, savings, net worth, and monthly payments at specific years
+            </Typography>
+            <Box sx={{ height: 400, width: '100%' }}>
+              <DataGrid
+                rows={summaryTableData}
+                columns={summaryTableColumns}
+                hideFooter
+                disableRowSelectionOnClick
+                disableColumnMenu
+                sx={{
+                  border: 'none',
+                  '& .MuiDataGrid-cell': {
+                    borderBottom: '1px solid #f0f0f0',
+                  },
+                  '& .MuiDataGrid-columnHeaders': {
+                    backgroundColor: '#f8f9fa',
+                    borderBottom: '2px solid #e0e0e0',
+                    fontWeight: 600,
+                  },
+                  '& .MuiDataGrid-row:hover': {
+                    backgroundColor: '#f5f5f5',
+                  },
+                }}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Balances Chart */}
       <Card elevation={3}>
