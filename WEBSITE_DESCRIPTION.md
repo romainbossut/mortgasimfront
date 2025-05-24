@@ -1,16 +1,17 @@
-# Mortgage Simulation Tool - Website Description
+# Mortgage, Savings & Overpayment Simulator - Website Description
 
 ## 🏠 What is MortgaSim?
 
-MortgaSim is a **free, comprehensive mortgage simulation calculator** that helps homeowners and potential buyers make informed financial decisions about their mortgage and savings strategy. Unlike basic mortgage calculators, our tool provides **dynamic, interactive projections** that show how your mortgage payments, savings growth, and net worth evolve over time.
+MortgaSim is a **free, comprehensive mortgage, savings and overpayment simulator** that helps homeowners and potential buyers make informed financial decisions about their mortgage strategy, savings growth, and overpayment planning. Unlike basic mortgage calculators, our tool provides **dynamic, interactive projections** that show how your mortgage payments, savings growth, overpayment strategies, and net worth evolve over time.
 
 ## 🎯 What Does It Do?
 
 ### Core Functionality
-Our simulation tool calculates and visualizes:
+Our comprehensive simulator calculates and visualizes:
 
-- **Month-by-month mortgage balance** tracking
-- **Savings account growth** with compound interest
+- **Month-by-month mortgage balance** tracking with overpayment impact
+- **Savings account growth** with compound interest and withdrawal modeling
+- **Overpayment strategies** with flexible timing and amounts
 - **Net worth evolution** (property value + savings - mortgage debt)
 - **Payment schedules** including fixed and variable rate periods
 - **Financial projections** extending years after mortgage payoff
@@ -24,11 +25,12 @@ Our simulation tool calculates and visualizes:
 
 ## 💰 Key Features
 
-### 📊 Advanced Mortgage Modeling
+### 📊 Advanced Mortgage & Overpayment Modeling
 - **Fixed-rate periods** followed by variable rates
 - **Payment caps** after fixed periods end
-- **Overpayment scenarios** with flexible scheduling
-- **Early payoff** calculations and projections
+- **Comprehensive overpayment simulation** with flexible scheduling and amounts
+- **Overpayment strategy optimization** comparing different approaches
+- **Early payoff** calculations and projections with savings impact
 
 ### 💳 Comprehensive Savings Integration
 - **Parallel savings tracking** alongside mortgage
@@ -91,11 +93,12 @@ Enter your specific details:
 
 ## 📋 Example Scenarios
 
-### Scenario 1: Overpayment Strategy
-*"Should I overpay my mortgage or save more?"*
+### Scenario 1: Overpayment Strategy Optimization
+*"Should I overpay my mortgage, when, and how much?"*
+- Model different overpayment amounts and timing
 - Compare mortgage overpayments vs additional savings
-- See long-term net worth impact
-- Identify optimal payment strategy
+- See impact on mortgage payoff timeline and total interest
+- Identify optimal overpayment strategy for your situation
 
 ### Scenario 2: Remortgage Planning
 *"When should I remortgage and what rate do I need?"*
@@ -131,7 +134,7 @@ Enter your specific details:
 ## 🌟 Why Choose MortgaSim?
 
 ### ✅ **Comprehensive**
-Unlike basic calculators, we model the complete financial picture including savings growth and net worth evolution.
+Unlike basic mortgage calculators, we model the complete financial picture including mortgage payments, savings growth, overpayment strategies, and net worth evolution in one integrated tool.
 
 ### ✅ **Realistic**
 Incorporates real-world constraints like payment caps, savings depletion for overpayments, and variable rate transitions.

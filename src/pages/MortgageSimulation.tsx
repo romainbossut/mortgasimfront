@@ -229,10 +229,10 @@ export const MortgageSimulation: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant="h6" fontWeight={500} color="text.primary">
-                Mortgage Simulation
+                Mortgage, Savings & Overpayment Simulator
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Simulate mortgage payments, savings growth, and net worth over time
+                Model mortgage payments, savings growth, overpayment strategies, and net worth evolution
               </Typography>
             </Box>
             

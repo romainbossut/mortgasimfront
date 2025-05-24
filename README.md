@@ -1,16 +1,19 @@
-# 🏠 Mortgage Simulation Frontend
+# 🏠 Mortgage, Savings & Overpayment Simulator Frontend
 
-A modern React TypeScript application for simulating mortgage payments, savings growth, and net worth over time. This frontend connects to the [Mortgage Simulation API](https://api.mortgasim.com/) to provide comprehensive financial projections.
+A modern React TypeScript application for comprehensive mortgage, savings and overpayment simulation. This frontend connects to the [Mortgage Simulation API](https://api.mortgasim.com/) to provide detailed financial projections and modeling capabilities.
 
 ## ✨ Features
 
-- **Interactive Form**: Easy-to-use form for entering mortgage and savings parameters
+- **Comprehensive Financial Modeling**: Complete mortgage, savings, and overpayment simulation
+- **Interactive Form**: Easy-to-use form for entering mortgage, savings, and overpayment parameters  
+- **Overpayment Strategies**: Model different overpayment scenarios and timing
 - **Real-time Charts**: Beautiful Chart.js visualizations showing:
   - Balance evolution (mortgage balance, savings balance, net worth)
   - Monthly payment breakdown (payments, interest, principal)
-- **Summary Statistics**: Key metrics including final balances, minimum savings, and payoff dates
+  - Impact of overpayments on payoff timeline
+- **Summary Statistics**: Key metrics including final balances, minimum savings, payoff dates, and overpayment benefits
 - **Sample Data**: Load sample scenarios for quick testing
-- **CSV Export**: Download simulation results for further analysis
+- **CSV Export**: Download detailed simulation results for further analysis
 - **API Health Monitoring**: Real-time status of the backend API
 - **Responsive Design**: Works perfectly on desktop and mobile devices
 
