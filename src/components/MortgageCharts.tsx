@@ -184,7 +184,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
 
   const chartConfig = {
     height: 350,
-    margin: { left: 100, right: 20, top: 40, bottom: 60 },
+    margin: { left: 80, right: 80, top: 20, bottom: 60 },
     grid: { horizontal: true, vertical: false },
     curve: 'monotoneX' as const,
     sx: chartStyles,
