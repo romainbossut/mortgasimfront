@@ -123,7 +123,24 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
+            backgroundColor: '#ffffff',
             borderRadius: 8,
+            transition: 'all 0.2s ease-in-out',
+            '&:hover': {
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            },
+            '&.Mui-focused': {
+              boxShadow: '0 4px 12px rgba(25,118,210,0.15)',
+            },
+            '&.Mui-error.Mui-focused': {
+              boxShadow: '0 4px 12px rgba(211,47,47,0.15)',
+            },
+          },
+          '& .MuiInputBase-input': {
+            fontWeight: 500,
+          },
+          '& .MuiInputLabel-root': {
+            fontWeight: 500,
           },
         },
       },
