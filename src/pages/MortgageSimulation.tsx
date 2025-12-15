@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { track } from '@vercel/analytics'
 import {
   Box,
@@ -24,8 +24,23 @@ import { MortgageForm } from '../components/MortgageForm'
 import { MortgageCharts } from '../components/MortgageCharts'
 import { Footer } from '../components/Footer'
 import { MortgageApiService, transformFormDataToRequest } from '../services/mortgageApi'
+import { useDebouncedSimulation } from '../hooks/useDebouncedSimulation'
+import { useOverpaymentStore } from '../store/overpaymentStore'
+import { defaultFormValues } from '../utils/validation'
 import type { MortgageFormData } from '../utils/validation'
 import type { SimulationResponse, SimulationRequest } from '../types/mortgage'
+
+const STORAGE_KEY = 'mortgasim-form-values'
+
+// Load saved form values from localStorage
+const loadSavedFormValues = (): MortgageFormData | null => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved ? JSON.parse(saved) : null
+  } catch {
+    return null
+  }
+}
 
 // Utility function to safely extract error messages
 const getErrorMessage = (error: unknown): string => {
@@ -43,49 +58,53 @@ export const MortgageSimulation: React.FC = () => {
   const [warnings, setWarnings] = useState<string[]>([])
   const [currentStartDate, setCurrentStartDate] = useState<string>('')
   const [lastSimulationRequest, setLastSimulationRequest] = useState<SimulationRequest | null>(null)
-  const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
 
-  // Track home page visits
-  useEffect(() => {
-    track('home_page_visit', {
-      page_url: window.location.pathname,
-      is_sample_load: true,
-    })
-  }, [])
+  // Ref to track if we've done initial load
+  const initialLoadRef = useRef(false)
+  // Ref to track previous overpayments string to avoid unnecessary recalculations
+  const prevOverpaymentsRef = useRef<string | null>(null)
 
-  // Mutation for running simulation
-  const simulationMutation = useMutation({
-    mutationFn: MortgageApiService.simulate,
+  // Overpayment store
+  const { chartOverpayments, toApiString } = useOverpaymentStore()
+
+  // Debounced simulation for real-time overpayment updates
+  const {
+    debouncedMutate,
+    mutate: immediateSimulate,
+    isPending: isSimulating,
+    isDebouncing,
+    error: simulationError,
+  } = useDebouncedSimulation({
+    debounceMs: 500,
     onSuccess: (data) => {
       setSimulationResults(data)
       setWarnings(data.warnings || [])
-      
+
       // Track successful simulation
       track('mortgage_simulation_completed', {
         page_type: 'home',
         has_warnings: (data.warnings || []).length > 0,
         warnings_count: (data.warnings || []).length,
-        auto_loaded: hasAutoLoaded,
+        from_chart_overpayment: chartOverpayments.length > 0,
       })
     },
     onError: (error) => {
       console.error('Simulation failed:', error)
-      
+
       // Track simulation errors
       track('mortgage_simulation_error', {
         page_type: 'home',
         error_message: getErrorMessage(error),
-        auto_loaded: hasAutoLoaded,
       })
     },
   })
 
-  // Query for getting sample data
-  const sampleQuery = useQuery({
-    queryKey: ['sample-request'],
-    queryFn: MortgageApiService.getSampleRequest,
-    enabled: false, // Only run when explicitly called
-  })
+  // Track home page visits
+  useEffect(() => {
+    track('home_page_visit', {
+      page_url: window.location.pathname,
+    })
+  }, [])
 
   // Health check query
   const healthQuery = useQuery({
@@ -95,57 +114,92 @@ export const MortgageSimulation: React.FC = () => {
     refetchInterval: 300000, // 5 minutes
   })
 
-  // Auto-load sample data on component mount
+  // Auto-load saved data on component mount
   useEffect(() => {
-    const loadSampleData = async () => {
-      if (!hasAutoLoaded) {
-        try {
-          const sampleData = await sampleQuery.refetch()
-          if (sampleData.data) {
-            // Set a default start date for sample data
-            const today = new Date().toISOString().split('T')[0]
-            setCurrentStartDate(today)
-            setLastSimulationRequest(sampleData.data)
-            simulationMutation.mutate(sampleData.data)
-            setHasAutoLoaded(true)
-          }
-        } catch (error) {
-          console.error('Failed to auto-load sample:', error)
-        }
+    if (!initialLoadRef.current) {
+      initialLoadRef.current = true
+
+      // Load from localStorage or use defaults
+      const savedValues = loadSavedFormValues()
+      const formValues = savedValues || defaultFormValues
+
+      setCurrentStartDate(formValues.start_date)
+      const request = transformFormDataToRequest(formValues)
+
+      // Include any persisted overpayments from the store
+      const overpaymentString = toApiString()
+      if (overpaymentString && request.simulation) {
+        request.simulation.overpayments = overpaymentString
+        prevOverpaymentsRef.current = overpaymentString
       }
+
+      setLastSimulationRequest(request)
+      immediateSimulate(request)
+    }
+  }, [immediateSimulate, toApiString])
+
+  // Real-time recalculation when overpayments change
+  useEffect(() => {
+    // Skip if no initial results yet or no base request to modify
+    if (!simulationResults || !lastSimulationRequest) return
+
+    // Build request with chart overpayments
+    const overpaymentString = toApiString()
+
+    // Only recalculate if overpayments actually changed
+    if (overpaymentString === prevOverpaymentsRef.current) return
+    prevOverpaymentsRef.current = overpaymentString
+
+    // Clone the last request and update overpayments
+    const request: SimulationRequest = JSON.parse(JSON.stringify(lastSimulationRequest))
+
+    // Inject the overpayment string directly
+    if (request.simulation) {
+      request.simulation.overpayments = overpaymentString || null
     }
 
-    loadSampleData()
-  }, [hasAutoLoaded, sampleQuery, simulationMutation])
+    console.log('Recalculating with overpayments:', overpaymentString)
+    debouncedMutate(request)
+  }, [chartOverpayments, simulationResults, lastSimulationRequest, toApiString, debouncedMutate])
 
-  const handleFormSubmit = (formData: MortgageFormData) => {
-    setCurrentStartDate(formData.start_date) // Store the start date
-    const request = transformFormDataToRequest(formData)
-    setLastSimulationRequest(request) // Store the request for CSV export
-    
-    // Track manual form submission
-    track('mortgage_form_submitted', {
-      page_type: 'home',
-      loan_amount: formData.mortgage_amount.toString(),
-      term_years: formData.term_years.toString(),
-      fixed_rate: formData.fixed_rate.toString(),
-      is_manual_submission: true,
-    })
-    
-    simulationMutation.mutate(request)
-  }
+  const handleFormSubmit = useCallback(
+    (formData: MortgageFormData) => {
+      setCurrentStartDate(formData.start_date)
+
+      const request = transformFormDataToRequest(formData)
+
+      // Preserve existing overpayments when form values change
+      const overpaymentString = toApiString()
+      if (overpaymentString && request.simulation) {
+        request.simulation.overpayments = overpaymentString
+      }
+
+      setLastSimulationRequest(request)
+
+      // Track form change
+      track('mortgage_form_changed', {
+        page_type: 'home',
+        loan_amount: formData.mortgage_amount.toString(),
+        term_years: formData.term_years.toString(),
+        fixed_rate: formData.fixed_rate.toString(),
+      })
+
+      immediateSimulate(request)
+    },
+    [immediateSimulate, toApiString]
+  )
 
   const handleExportCsv = async () => {
     if (!simulationResults || !lastSimulationRequest) return
-    
+
     try {
       // Track CSV export attempt
       track('csv_export_started', {
         page_type: 'home',
       })
-      
+
       const csvBlob = await MortgageApiService.exportCsv(lastSimulationRequest)
-      
+
       // Create download link
       const url = window.URL.createObjectURL(csvBlob)
       const link = document.createElement('a')
@@ -155,7 +209,7 @@ export const MortgageSimulation: React.FC = () => {
       link.click()
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
-      
+
       // Track successful CSV export
       track('csv_export_completed', {
         page_type: 'home',
@@ -163,7 +217,7 @@ export const MortgageSimulation: React.FC = () => {
       })
     } catch (error) {
       console.error('Failed to export CSV:', error)
-      
+
       // Track CSV export error
       track('csv_export_error', {
         page_type: 'home',
@@ -171,8 +225,6 @@ export const MortgageSimulation: React.FC = () => {
       })
     }
   }
-
-
 
   const getApiStatusChip = () => {
     if (healthQuery.isLoading) {
@@ -187,7 +239,7 @@ export const MortgageSimulation: React.FC = () => {
         />
       )
     }
-    
+
     if (healthQuery.isError) {
       return (
         <Chip
@@ -200,7 +252,7 @@ export const MortgageSimulation: React.FC = () => {
         />
       )
     }
-    
+
     return (
       <Chip
         icon={<CheckCircle sx={{ fontSize: 14 }} />}
@@ -213,16 +265,19 @@ export const MortgageSimulation: React.FC = () => {
     )
   }
 
+  // Show recalculating indicator when debouncing or simulating from chart interaction
+  const isRecalculating = isDebouncing || (isSimulating && chartOverpayments.length > 0)
+
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
       {/* Subtle Header */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
+      <Paper
+        elevation={0}
+        sx={{
           backgroundColor: 'background.paper',
           borderBottom: '1px solid',
           borderColor: 'divider',
-          py: 2
+          py: 2,
         }}
       >
         <Container maxWidth="xl">
@@ -232,10 +287,11 @@ export const MortgageSimulation: React.FC = () => {
                 Mortgage, Savings & Overpayment Simulator
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Model mortgage payments, savings growth, overpayment strategies, and net worth evolution
+                Model mortgage payments, savings growth, overpayment strategies, and net worth
+                evolution
               </Typography>
             </Box>
-            
+
             <Box sx={{ display: 'flex', alignItems: 'center' }}>
               {getApiStatusChip()}
             </Box>
@@ -245,40 +301,30 @@ export const MortgageSimulation: React.FC = () => {
 
       <Container maxWidth="xl" sx={{ py: 4 }}>
         {/* Error Display */}
-        {simulationMutation.isError && (
-          <Alert 
-            severity="error" 
-            icon={<Error />}
-            sx={{ mb: 3 }}
-            elevation={1}
-          >
+        {simulationError && (
+          <Alert severity="error" icon={<Error />} sx={{ mb: 3 }} elevation={1}>
             <Typography variant="subtitle2" fontWeight="medium" gutterBottom>
               Simulation Error
             </Typography>
-            <Typography variant="body2">
-              {getErrorMessage(simulationMutation.error)}
-            </Typography>
+            <Typography variant="body2">{getErrorMessage(simulationError)}</Typography>
           </Alert>
         )}
 
-        <Box 
-          sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', lg: 'row' }, 
-            gap: 4 
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
           }}
         >
-          {/* Form Section */}
-          <Box sx={{ flex: { xs: '1', lg: '0 0 420px' } }}>
-            <MortgageForm
-              onSubmit={handleFormSubmit}
-              isLoading={simulationMutation.isPending}
-            />
+          {/* Form Section - Full Width on Top */}
+          <Box sx={{ width: '100%' }}>
+            <MortgageForm onSubmit={handleFormSubmit} />
           </Box>
 
-          {/* Results Section */}
-          <Box sx={{ flex: 1 }}>
-            {simulationMutation.isPending && (
+          {/* Results Section - Full Width */}
+          <Box sx={{ width: '100%' }}>
+            {isSimulating && !simulationResults && (
               <Card elevation={3}>
                 <CardContent>
                   <Box
@@ -304,7 +350,7 @@ export const MortgageSimulation: React.FC = () => {
               </Card>
             )}
 
-            {simulationResults && !simulationMutation.isPending && (
+            {simulationResults && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {/* Export Button */}
                 <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -313,19 +359,19 @@ export const MortgageSimulation: React.FC = () => {
                     startIcon={<FileDownload />}
                     variant="outlined"
                     size="small"
-                    sx={{ 
+                    sx={{
                       borderColor: 'primary.main',
                       color: 'primary.main',
                       '&:hover': {
                         backgroundColor: 'primary.50',
                         borderColor: 'primary.dark',
-                      }
+                      },
                     }}
                   >
                     Export CSV
                   </Button>
                 </Box>
-                
+
                 {/* Charts */}
                 <MortgageCharts
                   chartData={simulationResults.chart_data}
@@ -333,11 +379,12 @@ export const MortgageSimulation: React.FC = () => {
                   startDate={currentStartDate}
                   notes={warnings.length > 0 ? warnings : undefined}
                   isLoading={false}
+                  isRecalculating={isRecalculating}
                 />
               </Box>
             )}
 
-            {!simulationResults && !simulationMutation.isPending && (
+            {!simulationResults && !isSimulating && (
               <Card elevation={3}>
                 <CardContent>
                   <Box
@@ -353,23 +400,16 @@ export const MortgageSimulation: React.FC = () => {
                   >
                     <TrendingUp sx={{ fontSize: '4rem', mb: 2, color: 'primary.main' }} />
                     <Typography variant="h4" gutterBottom fontWeight={600}>
-                      Loading sample simulation...
+                      Loading simulation...
                     </Typography>
-                    <Typography variant="body1" color="text.secondary" sx={{ mb: 4, maxWidth: 500 }}>
-                      We're automatically loading a sample mortgage simulation to show you how the tool works. 
-                      You can modify the parameters on the left to run your own simulation.
+                    <Typography
+                      variant="body1"
+                      color="text.secondary"
+                      sx={{ mb: 4, maxWidth: 500 }}
+                    >
+                      Your simulation will appear here. Adjust any parameter above to see results
+                      update in real-time.
                     </Typography>
-                    <Box sx={{ 
-                      p: 3, 
-                      backgroundColor: 'rgba(25, 118, 210, 0.05)', 
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: 'rgba(25, 118, 210, 0.2)'
-                    }}>
-                      <Typography variant="body2" color="primary.main" fontWeight="medium">
-                        💡 <strong>Tip:</strong> Adjust any parameter and click "Run Simulation" to see your personalized results
-                      </Typography>
-                    </Box>
                   </Box>
                 </CardContent>
               </Card>
@@ -381,4 +421,4 @@ export const MortgageSimulation: React.FC = () => {
       <Footer />
     </Box>
   )
-} 
+}

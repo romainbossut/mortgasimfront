@@ -23,9 +23,12 @@ export default defineConfig({
             '@emotion/styled'
           ],
           
-          // Charts - likely the largest contributor
+          // Charts - Chart.js for interactive charting
           'vendor-charts': [
-            '@mui/x-charts'
+            'chart.js',
+            'react-chartjs-2',
+            'chartjs-plugin-annotation',
+            'date-fns'
           ],
           
           // Form handling and validation

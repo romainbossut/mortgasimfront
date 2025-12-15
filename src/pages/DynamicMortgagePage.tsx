@@ -449,7 +449,6 @@ export const DynamicMortgagePage: React.FC = () => {
           <Box sx={{ flex: { xs: '1', lg: '0 0 420px' } }}>
             <MortgageForm
               onSubmit={handleFormSubmit}
-              isLoading={simulationMutation.isPending}
               initialValues={hasUrlParams ? preFilledFormData : undefined}
             />
           </Box>

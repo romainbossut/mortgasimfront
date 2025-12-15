@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { useForm, Controller, useFieldArray } from 'react-hook-form'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box,
@@ -9,11 +9,6 @@ import {
   TextField,
   Button,
   Paper,
-  FormControl,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  IconButton,
   Snackbar,
   Alert,
 } from '@mui/material'
@@ -23,89 +18,120 @@ import {
   Savings,
   Settings,
   CalendarToday,
-  Add,
-  Delete,
   PaymentOutlined,
   Share,
+  TouchApp,
 } from '@mui/icons-material'
-import { 
-  mortgageFormSchema, 
+import {
+  mortgageFormSchema,
   defaultFormValues
 } from '../utils/validation'
 import { generateShareableLink, copyToClipboard } from '../utils/urlParser'
 import type { MortgageFormData } from '../utils/validation'
 
+const STORAGE_KEY = 'mortgasim-form-values'
+
 interface MortgageFormProps {
   onSubmit: (data: MortgageFormData) => void
-  isLoading?: boolean
   initialValues?: Partial<MortgageFormData>
+}
+
+// Load saved values from localStorage
+const loadSavedValues = (): Partial<MortgageFormData> | null => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved ? JSON.parse(saved) : null
+  } catch {
+    return null
+  }
+}
+
+// Save values to localStorage
+const saveValues = (values: MortgageFormData) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(values))
+  } catch (error) {
+    console.warn('Failed to save form values:', error)
+  }
 }
 
 export const MortgageForm: React.FC<MortgageFormProps> = ({
   onSubmit,
-  isLoading = false,
   initialValues,
 }) => {
-  // Use initialValues if provided (from URL), otherwise use defaults
-  const formValues = initialValues || defaultFormValues
-  
-  const [lastSimulatedValues, setLastSimulatedValues] = useState<MortgageFormData | null>(null)
+  // Priority: URL params > localStorage > defaults
+  const savedValues = loadSavedValues()
+  const formValues = initialValues || savedValues || defaultFormValues
+
   const [shareSnackbar, setShareSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
     open: false,
     message: '',
     severity: 'success'
   })
 
+  // Debounce timer ref
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastSubmittedRef = useRef<string>('')
+  const isInitialMount = useRef(true)
+
   const {
     control,
-    handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
     watch,
-    setValue,
     reset,
   } = useForm<MortgageFormData>({
     resolver: zodResolver(mortgageFormSchema) as any,
     defaultValues: formValues,
+    mode: 'onChange',
   })
 
   // Reset form when initialValues change (e.g., from URL parameters)
   useEffect(() => {
     if (initialValues && Object.keys(initialValues).length > 0) {
-      // initialValues is already merged with defaults in DynamicMortgagePage
       reset(initialValues)
     }
   }, [initialValues, reset])
 
-  // Use field array for custom overpayments
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "custom_overpayments"
-  })
-
-  // Watch all form values to detect changes
+  // Watch all form values
   const currentValues = watch()
 
-  // Check if current form values differ from last simulated values
-  const hasFormChanged = lastSimulatedValues ? 
-    JSON.stringify(currentValues) !== JSON.stringify(lastSimulatedValues) : 
-    false
+  // Debounced auto-submit on form changes
+  const debouncedSubmit = useCallback((data: MortgageFormData) => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current)
+    }
 
-  const handleFormSubmit = (data: any) => {
-    setLastSimulatedValues(data)
-    onSubmit(data)
-  }
+    debounceRef.current = setTimeout(() => {
+      const valueString = JSON.stringify(data)
+      // Only submit if values actually changed
+      if (valueString !== lastSubmittedRef.current) {
+        lastSubmittedRef.current = valueString
+        saveValues(data)
+        onSubmit(data)
+      }
+    }, 500)
+  }, [onSubmit])
 
-  // Button should be enabled if no simulation has run yet OR form has changed since last simulation
-  const isButtonEnabled = !isLoading && (!lastSimulatedValues || hasFormChanged)
+  // Auto-submit when form values change
+  useEffect(() => {
+    // Skip initial mount - let MortgageSimulation handle initial load
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      // Save initial values to localStorage
+      saveValues(currentValues as MortgageFormData)
+      return
+    }
 
-  const addCustomOverpayment = () => {
-    const currentYear = new Date().getFullYear()
-    append({ month: 1, year: currentYear, amount: 0 })
-  }
+    if (isValid) {
+      debouncedSubmit(currentValues as MortgageFormData)
+    }
 
-  const removeCustomOverpayment = (index: number) => {
-    remove(index)
-  }
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current)
+      }
+    }
+  }, [currentValues, isValid, debouncedSubmit])
 
   const handleShareLink = async () => {
     try {
@@ -142,534 +168,349 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   return (
     <Card elevation={3}>
       <CardContent sx={{ p: 3 }}>
-        {/* Header without reset button */}
-        <Box sx={{ mb: 3 }}>
+        {/* Header with share button */}
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
           <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Calculate color="primary" />
             Mortgage Simulation Parameters
           </Typography>
+
+          <Button
+            onClick={handleShareLink}
+            variant="outlined"
+            size="small"
+            startIcon={<Share />}
+            sx={{
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                backgroundColor: 'primary.50',
+                borderColor: 'primary.dark',
+              }
+            }}
+          >
+            Share Link
+          </Button>
         </Box>
 
-        <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          {/* Start Date */}
-          <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(76, 175, 80, 0.02)' }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <CalendarToday color="success" />
-              Simulation Start Date
-            </Typography>
-            
-            <Controller
-              name="start_date"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Start Date"
-                  type="date"
-                  error={!!errors.start_date}
-                  helperText={errors.start_date?.message || 'All projections will be calculated from this date'}
-                  fullWidth
-                  size="small"
-                  InputLabelProps={{
-                    shrink: true,
-                  }}
-                />
-              )}
-            />
-          </Paper>
+        <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {/* Top Row: Start Date + Mortgage Details + Savings Details */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr 1.5fr' }, gap: 2 }}>
+            {/* Start Date */}
+            <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(76, 175, 80, 0.02)' }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
+                <CalendarToday color="success" fontSize="small" />
+                Start Date
+              </Typography>
 
-          {/* Mortgage Parameters */}
-          <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(25, 118, 210, 0.02)' }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <AccountBalance color="primary" />
-              Mortgage Details
-            </Typography>
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
               <Controller
-                name="mortgage_amount"
+                name="start_date"
                 control={control}
                 render={({ field }) => (
                   <TextField
                     {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Mortgage Amount (£)"
-                    type="number"
-                    error={!!errors.mortgage_amount}
-                    helperText={errors.mortgage_amount?.message}
+                    label="Start Date"
+                    type="date"
+                    error={!!errors.start_date}
+                    helperText={errors.start_date?.message}
                     fullWidth
-                    placeholder="200000"
                     size="small"
-                  />
-                )}
-              />
-
-              <Controller
-                name="term_years"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Term (Years)"
-                    type="number"
-                    error={!!errors.term_years}
-                    helperText={errors.term_years?.message}
-                    fullWidth
-                    placeholder="25"
-                    inputProps={{ min: 1, max: 40 }}
-                    size="small"
-                  />
-                )}
-              />
-
-              <Controller
-                name="fixed_rate"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Fixed Rate (%)"
-                    type="number"
-                    error={!!errors.fixed_rate}
-                    helperText={errors.fixed_rate?.message}
-                    fullWidth
-                    placeholder="1.65"
-                    inputProps={{ min: 0, max: 15, step: 0.01 }}
-                    size="small"
-                  />
-                )}
-              />
-
-              <Controller
-                name="fixed_term_months"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Fixed Term (Months)"
-                    type="number"
-                    error={!!errors.fixed_term_months}
-                    helperText={errors.fixed_term_months?.message}
-                    fullWidth
-                    placeholder="24"
-                    inputProps={{ min: 0 }}
-                    size="small"
-                  />
-                )}
-              />
-
-              <Controller
-                name="variable_rate"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Variable Rate (%)"
-                    type="number"
-                    error={!!errors.variable_rate}
-                    helperText={errors.variable_rate?.message}
-                    fullWidth
-                    placeholder="6.0"
-                    inputProps={{ min: 0, max: 15, step: 0.01 }}
-                    size="small"
-                  />
-                )}
-              />
-
-              <Controller
-                name="max_payment_after_fixed"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Max Payment (£)"
-                    type="number"
-                    error={!!errors.max_payment_after_fixed}
-                    helperText={errors.max_payment_after_fixed?.message || 'Optional'}
-                    fullWidth
-                    placeholder="Optional"
-                    size="small"
-                  />
-                )}
-              />
-            </Box>
-          </Paper>
-
-          {/* Savings Parameters */}
-          <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(46, 125, 50, 0.02)' }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Savings color="success" />
-              Savings Details
-            </Typography>
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-              <Controller
-                name="initial_balance"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Initial Savings (£)"
-                    type="number"
-                    error={!!errors.initial_balance}
-                    helperText={errors.initial_balance?.message}
-                    fullWidth
-                    placeholder="170000"
-                    inputProps={{ min: 0 }}
-                    size="small"
-                  />
-                )}
-              />
-
-              <Controller
-                name="monthly_contribution"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Monthly Savings (£)"
-                    type="number"
-                    error={!!errors.monthly_contribution}
-                    helperText={errors.monthly_contribution?.message}
-                    fullWidth
-                    placeholder="2500"
-                    inputProps={{ min: 0 }}
-                    size="small"
-                  />
-                )}
-              />
-
-              <Controller
-                name="savings_rate"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Savings Rate (%)"
-                    type="number"
-                    error={!!errors.savings_rate}
-                    helperText={errors.savings_rate?.message}
-                    fullWidth
-                    placeholder="4.3"
-                    inputProps={{ min: 0, max: 15, step: 0.01 }}
-                    size="small"
-                  />
-                )}
-              />
-            </Box>
-          </Paper>
-
-          {/* Simulation Parameters */}
-          <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(156, 39, 176, 0.02)' }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Settings color="secondary" />
-              Simulation Settings
-            </Typography>
-            
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-              <Controller
-                name="typical_payment"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Monthly Payment (£)"
-                    type="number"
-                    error={!!errors.typical_payment}
-                    helperText={errors.typical_payment?.message}
-                    fullWidth
-                    placeholder="878"
-                    inputProps={{ min: 0 }}
-                    size="small"
-                  />
-                )}
-              />
-
-              <Controller
-                name="asset_value"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Property Value (£)"
-                    type="number"
-                    error={!!errors.asset_value}
-                    helperText={errors.asset_value?.message}
-                    fullWidth
-                    placeholder="360000"
-                    inputProps={{ min: 0 }}
-                    size="small"
-                  />
-                )}
-              />
-
-              <Controller
-                name="show_years_after_payoff"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                    label="Years After Payoff"
-                    type="number"
-                    error={!!errors.show_years_after_payoff}
-                    helperText={errors.show_years_after_payoff?.message}
-                    fullWidth
-                    placeholder="5"
-                    inputProps={{ min: 0, max: 20 }}
-                    size="small"
-                  />
-                )}
-              />
-            </Box>
-          </Paper>
-
-          {/* Overpayments */}
-          <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(237, 108, 2, 0.02)' }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <PaymentOutlined color="warning" />
-              Overpayments (Optional)
-            </Typography>
-            
-            <Controller
-              name="overpayment_type"
-              control={control}
-              render={({ field }) => (
-                <FormControl component="fieldset" sx={{ mb: 2 }}>
-                  <RadioGroup
-                    {...field}
-                    row
-                    sx={{ gap: 2 }}
-                  >
-                    <FormControlLabel value="none" control={<Radio />} label="No Overpayments" />
-                    <FormControlLabel value="regular" control={<Radio />} label="Regular Overpayments" />
-                    <FormControlLabel value="custom" control={<Radio />} label="Custom Overpayments" />
-                  </RadioGroup>
-                </FormControl>
-              )}
-            />
-
-            {/* Regular Overpayments */}
-            {currentValues.overpayment_type === 'regular' && (
-              <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" gutterBottom>
-                  Set up regular monthly overpayments
-                </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-                  <Controller
-                    name="regular_overpayment_amount"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                        label="Monthly Amount (£)"
-                        type="number"
-                        error={!!errors.regular_overpayment_amount}
-                        helperText={errors.regular_overpayment_amount?.message}
-                        fullWidth
-                        placeholder="500"
-                        inputProps={{ min: 0 }}
-                        size="small"
-                      />
-                    )}
-                  />
-                  <Controller
-                    name="regular_overpayment_months"
-                    control={control}
-                    render={({ field }) => (
-                      <TextField
-                        {...field}
-                        onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                        label="Duration (Months)"
-                        type="number"
-                        error={!!errors.regular_overpayment_months}
-                        helperText={errors.regular_overpayment_months?.message}
-                        fullWidth
-                        placeholder="12"
-                        inputProps={{ min: 1, max: 300 }}
-                        size="small"
-                      />
-                    )}
-                  />
-                </Box>
-              </Box>
-            )}
-
-            {/* Custom Overpayments */}
-            {currentValues.overpayment_type === 'custom' && (
-              <Box sx={{ mt: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                  <Typography variant="subtitle2">
-                    Add specific overpayments by month/year
-                  </Typography>
-                  <Button
-                    onClick={addCustomOverpayment}
-                    startIcon={<Add />}
-                    variant="outlined"
-                    size="small"
-                  >
-                    Add Overpayment
-                  </Button>
-                </Box>
-                
-                {fields.length === 0 && (
-                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-                    No overpayments added yet. Click "Add Overpayment" to start.
-                  </Typography>
-                )}
-                
-                {fields.map((field, index) => (
-                  <Box 
-                    key={field.id} 
-                    sx={{ 
-                      p: 2,
-                      mb: 2,
-                      backgroundColor: 'rgba(255, 255, 255, 0.5)',
-                      border: '1px solid rgba(0, 0, 0, 0.1)',
-                      borderRadius: 1,
-                      '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                      }
+                    InputLabelProps={{
+                      shrink: true,
                     }}
-                  >
-                    {/* Header with overpayment number and delete button */}
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Typography variant="body2" fontWeight="medium" color="text.secondary">
-                        Overpayment #{index + 1}
-                      </Typography>
-                      <IconButton
-                        onClick={() => removeCustomOverpayment(index)}
-                        color="error"
-                        size="small"
-                        sx={{ 
-                          '&:hover': { 
-                            backgroundColor: 'rgba(211, 47, 47, 0.1)' 
-                          }
-                        }}
-                      >
-                        <Delete />
-                      </IconButton>
-                    </Box>
+                  />
+                )}
+              />
+            </Paper>
 
-                    {/* Fields in a vertical layout */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {/* Month/Year Date Input */}
-                      <Controller
-                        name={`custom_overpayments.${index}.month`}
-                        control={control}
-                        render={({ field: monthField }) => {
-                          const currentMonth = currentValues.custom_overpayments?.[index]?.month || 1
-                          const currentYear = currentValues.custom_overpayments?.[index]?.year || new Date().getFullYear()
-                          const monthValue = `${currentYear}-${String(currentMonth).padStart(2, '0')}`
-                          
-                          return (
-                            <TextField
-                              type="month"
-                              label="Month/Year"
-                              size="small"
-                              sx={{ maxWidth: 200 }}
-                              value={monthValue}
-                              onChange={(e) => {
-                                const [year, month] = e.target.value.split('-')
-                                if (year && month) {
-                                  monthField.onChange(parseInt(month))
-                                  setValue(`custom_overpayments.${index}.year` as any, parseInt(year))
-                                }
-                              }}
-                              error={!!errors.custom_overpayments?.[index]?.month || !!errors.custom_overpayments?.[index]?.year}
-                              InputLabelProps={{
-                                shrink: true,
-                              }}
-                            />
-                          )
-                        }}
-                      />
-                      
-                      {/* Amount Field - Full Width */}
-                      <Controller
-                        name={`custom_overpayments.${index}.amount`}
-                        control={control}
-                        render={({ field: amountField }) => (
-                          <TextField
-                            {...amountField}
-                            onChange={(e) => amountField.onChange(e.target.value ? Number(e.target.value) : '')}
-                            label="Overpayment Amount (£)"
-                            type="number"
-                            error={!!errors.custom_overpayments?.[index]?.amount}
-                            helperText={errors.custom_overpayments?.[index]?.amount?.message || 'Enter the amount you want to overpay in this month'}
-                            inputProps={{ min: 0 }}
-                            size="small"
-                            placeholder="e.g., 5000"
-                            fullWidth
-                          />
-                        )}
-                      />
-                    </Box>
-                    
-                    {/* Hidden Year Field */}
-                    <Controller
-                      name={`custom_overpayments.${index}.year`}
-                      control={control}
-                      render={() => <div style={{ display: 'none' }} />}
+            {/* Mortgage Parameters */}
+            <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(25, 118, 210, 0.02)' }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
+                <AccountBalance color="primary" fontSize="small" />
+                Mortgage Details
+              </Typography>
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+                <Controller
+                  name="mortgage_amount"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Amount (£)"
+                      type="number"
+                      error={!!errors.mortgage_amount}
+                      helperText={errors.mortgage_amount?.message}
+                      fullWidth
+                      placeholder="200000"
+                      size="small"
                     />
-                  </Box>
-                ))}
+                  )}
+                />
+
+                <Controller
+                  name="term_years"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Term (Years)"
+                      type="number"
+                      error={!!errors.term_years}
+                      helperText={errors.term_years?.message}
+                      fullWidth
+                      placeholder="25"
+                      inputProps={{ min: 1, max: 40 }}
+                      size="small"
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="fixed_rate"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Fixed Rate (%)"
+                      type="number"
+                      error={!!errors.fixed_rate}
+                      helperText={errors.fixed_rate?.message}
+                      fullWidth
+                      placeholder="1.65"
+                      inputProps={{ min: 0, max: 15, step: 0.01 }}
+                      size="small"
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="fixed_term_months"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Fixed Term (Mo)"
+                      type="number"
+                      error={!!errors.fixed_term_months}
+                      helperText={errors.fixed_term_months?.message}
+                      fullWidth
+                      placeholder="24"
+                      inputProps={{ min: 0 }}
+                      size="small"
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="variable_rate"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Variable Rate (%)"
+                      type="number"
+                      error={!!errors.variable_rate}
+                      helperText={errors.variable_rate?.message}
+                      fullWidth
+                      placeholder="6.0"
+                      inputProps={{ min: 0, max: 15, step: 0.01 }}
+                      size="small"
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="max_payment_after_fixed"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Max Payment (£)"
+                      type="number"
+                      error={!!errors.max_payment_after_fixed}
+                      helperText={errors.max_payment_after_fixed?.message || 'Optional'}
+                      fullWidth
+                      placeholder="Optional"
+                      size="small"
+                    />
+                  )}
+                />
               </Box>
-            )}
-          </Paper>
+            </Paper>
 
-          {/* Action Buttons */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
-            {/* Share Link Button */}
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <Button
-                onClick={handleShareLink}
-                variant="outlined"
-                size="medium"
-                startIcon={<Share />}
-                sx={{ 
-                  minWidth: 200,
-                  borderColor: 'primary.main',
-                  color: 'primary.main',
-                  '&:hover': {
-                    backgroundColor: 'primary.50',
-                    borderColor: 'primary.dark',
-                  }
+            {/* Savings Parameters */}
+            <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(46, 125, 50, 0.02)' }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
+                <Savings color="success" fontSize="small" />
+                Savings Details
+              </Typography>
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+                <Controller
+                  name="initial_balance"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Initial (£)"
+                      type="number"
+                      error={!!errors.initial_balance}
+                      helperText={errors.initial_balance?.message}
+                      fullWidth
+                      placeholder="170000"
+                      inputProps={{ min: 0 }}
+                      size="small"
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="monthly_contribution"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Monthly (£)"
+                      type="number"
+                      error={!!errors.monthly_contribution}
+                      helperText={errors.monthly_contribution?.message}
+                      fullWidth
+                      placeholder="2500"
+                      inputProps={{ min: 0 }}
+                      size="small"
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="savings_rate"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Rate (%)"
+                      type="number"
+                      error={!!errors.savings_rate}
+                      helperText={errors.savings_rate?.message}
+                      fullWidth
+                      placeholder="4.3"
+                      inputProps={{ min: 0, max: 15, step: 0.01 }}
+                      size="small"
+                    />
+                  )}
+                />
+              </Box>
+            </Paper>
+          </Box>
+
+          {/* Bottom Row: Simulation Settings + Overpayments Note */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2 }}>
+            {/* Simulation Parameters */}
+            <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(156, 39, 176, 0.02)' }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
+                <Settings color="secondary" fontSize="small" />
+                Simulation Settings
+              </Typography>
+
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+                <Controller
+                  name="typical_payment"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Monthly Payment (£)"
+                      type="number"
+                      error={!!errors.typical_payment}
+                      helperText={errors.typical_payment?.message}
+                      fullWidth
+                      placeholder="878"
+                      inputProps={{ min: 0 }}
+                      size="small"
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="asset_value"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Property Value (£)"
+                      type="number"
+                      error={!!errors.asset_value}
+                      helperText={errors.asset_value?.message}
+                      fullWidth
+                      placeholder="360000"
+                      inputProps={{ min: 0 }}
+                      size="small"
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="show_years_after_payoff"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      label="Years After Payoff"
+                      type="number"
+                      error={!!errors.show_years_after_payoff}
+                      helperText={errors.show_years_after_payoff?.message}
+                      fullWidth
+                      placeholder="5"
+                      inputProps={{ min: 0, max: 20 }}
+                      size="small"
+                    />
+                  )}
+                />
+              </Box>
+            </Paper>
+
+            {/* Overpayments Note */}
+            <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(237, 108, 2, 0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
+                <PaymentOutlined color="warning" fontSize="small" />
+                Overpayments
+              </Typography>
+
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  p: 1.5,
+                  backgroundColor: 'rgba(255, 152, 0, 0.08)',
+                  borderRadius: 1,
+                  border: '1px dashed rgba(255, 152, 0, 0.4)',
                 }}
               >
-                Share Link
-              </Button>
-            </Box>
-
-            {/* Run Simulation Button */}
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-              <Button
-                onClick={handleSubmit(handleFormSubmit)}
-                variant="contained"
-                size="large"
-                disabled={!isButtonEnabled}
-                startIcon={<Calculate />}
-                sx={{ 
-                  minWidth: 200,
-                  py: 1.5,
-                  fontSize: '1.1rem',
-                  fontWeight: 600,
-                }}
-              >
-                {isLoading ? 'Running Simulation...' : 'Run Simulation'}
-              </Button>
-            </Box>
+                <TouchApp sx={{ fontSize: 24, color: 'warning.main' }} />
+                <Box>
+                  <Typography variant="body2" fontWeight="medium" color="text.primary">
+                    Click on the Balance Chart
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Add overpayments by clicking on the chart below. Drag to adjust timing.
+                  </Typography>
+                </Box>
+              </Box>
+            </Paper>
           </Box>
         </Box>
       </CardContent>
