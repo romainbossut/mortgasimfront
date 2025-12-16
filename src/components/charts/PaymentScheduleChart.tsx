@@ -33,6 +33,7 @@ export const PaymentScheduleChart: React.FC<PaymentScheduleChartProps> = ({
           borderColor: chartColors.monthlyPayment,
           backgroundColor: `${chartColors.monthlyPayment}20`,
           fill: true,
+          tension: 0,
         },
       ],
     }

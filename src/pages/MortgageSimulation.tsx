@@ -280,7 +280,7 @@ export const MortgageSimulation: React.FC = () => {
           py: 2,
         }}
       >
-        <Container maxWidth="xl">
+        <Container maxWidth={false} sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Box>
               <Typography variant="h6" fontWeight={500} color="text.primary">
@@ -299,7 +299,7 @@ export const MortgageSimulation: React.FC = () => {
         </Container>
       </Paper>
 
-      <Container maxWidth="xl" sx={{ py: 4 }}>
+      <Container maxWidth={false} sx={{ py: 4, px: { xs: 2, sm: 3, md: 4 } }}>
         {/* Error Display */}
         {simulationError && (
           <Alert severity="error" icon={<Error />} sx={{ mb: 3 }} elevation={1}>

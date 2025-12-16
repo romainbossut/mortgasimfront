@@ -385,6 +385,7 @@ export const InteractiveBalanceChart: React.FC<InteractiveBalanceChartProps> = (
           backgroundColor: `${chartColors.mortgageBalance}10`,
           fill: true,
           order: 2,
+          tension: 0,
         },
         {
           label: 'Savings Balance',
@@ -393,6 +394,7 @@ export const InteractiveBalanceChart: React.FC<InteractiveBalanceChartProps> = (
           backgroundColor: `${chartColors.savingsBalance}10`,
           fill: true,
           order: 1,
+          tension: 0,
         },
       ],
     }

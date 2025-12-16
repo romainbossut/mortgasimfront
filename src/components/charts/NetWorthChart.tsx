@@ -29,6 +29,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({ years, netWorth, s
           borderColor: chartColors.netWorth,
           backgroundColor: `${chartColors.netWorth}20`,
           fill: true,
+          tension: 0,
         },
       ],
     }
