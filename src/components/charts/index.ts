@@ -1,4 +1,5 @@
 export { InteractiveBalanceChart } from './InteractiveBalanceChart'
 export { NetWorthChart } from './NetWorthChart'
 export { PaymentScheduleChart } from './PaymentScheduleChart'
+export { LTVChart } from './LTVChart'
 export { OverpaymentPopover } from './OverpaymentPopover'

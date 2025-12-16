@@ -49,6 +49,7 @@ export const DynamicMortgagePage: React.FC = () => {
   const [simulationResults, setSimulationResults] = useState<SimulationResponse | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
   const [currentStartDate, setCurrentStartDate] = useState<string>('')
+  const [currentAssetValue, setCurrentAssetValue] = useState<number>(360000)
   const [lastSimulationRequest, setLastSimulationRequest] = useState<SimulationRequest | null>(null)
   const [hasAutoLoaded, setHasAutoLoaded] = useState(false)
   const [shareSnackbar, setShareSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
@@ -260,6 +261,7 @@ export const DynamicMortgagePage: React.FC = () => {
 
   const handleFormSubmit = (formData: MortgageFormData) => {
     setCurrentStartDate(formData.start_date)
+    setCurrentAssetValue(formData.asset_value)
     const request = transformFormDataToRequest(formData)
     setLastSimulationRequest(request)
     
@@ -524,6 +526,7 @@ export const DynamicMortgagePage: React.FC = () => {
                   chartData={simulationResults.chart_data}
                   summaryStats={simulationResults.summary_statistics}
                   startDate={currentStartDate}
+                  assetValue={currentAssetValue}
                   notes={warnings.length > 0 ? warnings : undefined}
                   isLoading={false}
                 />

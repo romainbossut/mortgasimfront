@@ -17,13 +17,14 @@ import type { ChartData, SummaryStatistics } from '../types/mortgage'
 import '../utils/chartSetup'
 
 // Import Chart.js components
-import { InteractiveBalanceChart, NetWorthChart, PaymentScheduleChart } from './charts'
+import { InteractiveBalanceChart, NetWorthChart, PaymentScheduleChart, LTVChart } from './charts'
 
 interface MortgageChartsProps {
   chartData: ChartData
   summaryStats: SummaryStatistics
   startDate: string // Start date in YYYY-MM-DD format
   birthYear?: number // Optional birth year for age display on charts
+  assetValue: number // Property value for LTV calculation
   notes?: string[] // Notes/warnings to display under summary
   isLoading?: boolean
   isRecalculating?: boolean // Show subtle indicator when recalculating due to overpayment changes
@@ -34,6 +35,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
   summaryStats,
   startDate,
   birthYear,
+  assetValue,
   notes,
   isLoading = false,
   isRecalculating = false,
@@ -175,6 +177,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
         savingsBalance: [],
         netWorth: [],
         monthlyPayments: [],
+        ltv: [],
         maxPeriod: 0,
       }
     }
@@ -195,15 +198,18 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
       sampledIndices.push(totalPoints - 1)
     }
 
+    const mortgageBalances = sampledIndices.map((i) => chartData.mortgage_balance[i])
+
     return {
       years: sampledIndices.map((i) => chartData.years[i]),
-      mortgageBalance: sampledIndices.map((i) => chartData.mortgage_balance[i]),
+      mortgageBalance: mortgageBalances,
       savingsBalance: sampledIndices.map((i) => chartData.savings_balance[i]),
       netWorth: sampledIndices.map((i) => chartData.net_worth[i]),
       monthlyPayments: sampledIndices.map((i) => chartData.monthly_payments[i]),
+      ltv: mortgageBalances.map((balance) => assetValue > 0 ? (balance / assetValue) * 100 : 0),
       maxPeriod: Math.round(chartData.years[chartData.years.length - 1] * 12),
     }
-  }, [chartData])
+  }, [chartData, assetValue])
 
   if (processedData.years.length === 0) {
     return (
@@ -365,6 +371,23 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
             <NetWorthChart
               years={processedData.years}
               netWorth={processedData.netWorth}
+              startDate={startDate}
+              birthYear={birthYear}
+            />
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* LTV Chart */}
+      <Card elevation={3}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+            Loan-to-Value (LTV) Ratio
+          </Typography>
+          <Box sx={{ height: 350 }}>
+            <LTVChart
+              years={processedData.years}
+              ltvValues={processedData.ltv}
               startDate={startDate}
               birthYear={birthYear}
             />
