@@ -23,6 +23,7 @@ interface MortgageChartsProps {
   chartData: ChartData
   summaryStats: SummaryStatistics
   startDate: string // Start date in YYYY-MM-DD format
+  birthYear?: number // Optional birth year for age display on charts
   notes?: string[] // Notes/warnings to display under summary
   isLoading?: boolean
   isRecalculating?: boolean // Show subtle indicator when recalculating due to overpayment changes
@@ -32,6 +33,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
   chartData,
   summaryStats,
   startDate,
+  birthYear,
   notes,
   isLoading = false,
   isRecalculating = false,
@@ -346,6 +348,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
               mortgageBalance={processedData.mortgageBalance}
               savingsBalance={processedData.savingsBalance}
               startDate={startDate}
+              birthYear={birthYear}
               maxPeriod={processedData.maxPeriod}
             />
           </Box>
@@ -363,6 +366,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
               years={processedData.years}
               netWorth={processedData.netWorth}
               startDate={startDate}
+              birthYear={birthYear}
             />
           </Box>
         </CardContent>
@@ -379,6 +383,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
               years={processedData.years}
               monthlyPayments={processedData.monthlyPayments}
               startDate={startDate}
+              birthYear={birthYear}
             />
           </Box>
         </CardContent>

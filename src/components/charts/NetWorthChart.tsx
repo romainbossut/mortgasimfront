@@ -14,9 +14,12 @@ interface NetWorthChartProps {
   years: number[]
   netWorth: number[]
   startDate: string
+  birthYear?: number
 }
 
-export const NetWorthChart: React.FC<NetWorthChartProps> = ({ years, netWorth, startDate }) => {
+export const NetWorthChart: React.FC<NetWorthChartProps> = ({ years, netWorth, startDate, birthYear }) => {
+  // Calculate starting age if birth year is provided
+  const startingAge = birthYear ? new Date(startDate).getFullYear() - birthYear : undefined
   const data = useMemo(() => {
     const dates = years.map((y) => yearsToDate(y, startDate))
 
@@ -46,7 +49,13 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({ years, netWorth, s
             title: (items) => {
               if (items.length > 0 && items[0].parsed.x !== null) {
                 const date = new Date(items[0].parsed.x)
-                return formatDateLabel(date)
+                let title = formatDateLabel(date)
+                if (startingAge !== undefined) {
+                  const yearsFromStart = (date.getTime() - new Date(startDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+                  const age = Math.floor(startingAge + yearsFromStart)
+                  title += ` (Age ${age})`
+                }
+                return title
               }
               return ''
             },
@@ -71,6 +80,24 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({ years, netWorth, s
             maxTicksLimit: 12,
           },
         },
+        xAge: startingAge !== undefined ? {
+          type: 'linear' as const,
+          position: 'top' as const,
+          title: {
+            display: true,
+            text: 'Age',
+            font: { size: 11 },
+          },
+          min: startingAge,
+          max: startingAge + (years.length > 0 ? years[years.length - 1] : 0),
+          ticks: {
+            stepSize: 5,
+            callback: (value) => Math.floor(value as number),
+          },
+          grid: {
+            display: false,
+          },
+        } : undefined,
         y: {
           ...commonChartOptions.scales.y,
           ticks: {
@@ -80,7 +107,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({ years, netWorth, s
         },
       },
     }),
-    []
+    [startingAge, startDate, years]
   )
 
   return <Line data={data} options={options} />

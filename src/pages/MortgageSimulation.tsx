@@ -57,6 +57,7 @@ export const MortgageSimulation: React.FC = () => {
   const [simulationResults, setSimulationResults] = useState<SimulationResponse | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
   const [currentStartDate, setCurrentStartDate] = useState<string>('')
+  const [currentBirthYear, setCurrentBirthYear] = useState<number | undefined>(undefined)
   const [lastSimulationRequest, setLastSimulationRequest] = useState<SimulationRequest | null>(null)
 
   // Ref to track if we've done initial load
@@ -124,6 +125,7 @@ export const MortgageSimulation: React.FC = () => {
       const formValues = savedValues || defaultFormValues
 
       setCurrentStartDate(formValues.start_date)
+      setCurrentBirthYear(formValues.birth_year)
       const request = transformFormDataToRequest(formValues)
 
       // Include any persisted overpayments from the store
@@ -165,6 +167,7 @@ export const MortgageSimulation: React.FC = () => {
   const handleFormSubmit = useCallback(
     (formData: MortgageFormData) => {
       setCurrentStartDate(formData.start_date)
+      setCurrentBirthYear(formData.birth_year)
 
       const request = transformFormDataToRequest(formData)
 
@@ -377,6 +380,7 @@ export const MortgageSimulation: React.FC = () => {
                   chartData={simulationResults.chart_data}
                   summaryStats={simulationResults.summary_statistics}
                   startDate={currentStartDate}
+                  birthYear={currentBirthYear}
                   notes={warnings.length > 0 ? warnings : undefined}
                   isLoading={false}
                   isRecalculating={isRecalculating}

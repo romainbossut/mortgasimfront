@@ -196,31 +196,52 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
         <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {/* Top Row: Start Date + Mortgage Details + Savings Details */}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr 1.5fr' }, gap: 2 }}>
-            {/* Start Date */}
+            {/* Start Date & Birth Year */}
             <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(76, 175, 80, 0.02)' }}>
               <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
                 <CalendarToday color="success" fontSize="small" />
-                Start Date
+                Dates
               </Typography>
 
-              <Controller
-                name="start_date"
-                control={control}
-                render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Start Date"
-                    type="date"
-                    error={!!errors.start_date}
-                    helperText={errors.start_date?.message}
-                    fullWidth
-                    size="small"
-                    InputLabelProps={{
-                      shrink: true,
-                    }}
-                  />
-                )}
-              />
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Controller
+                  name="start_date"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Start Date"
+                      type="date"
+                      error={!!errors.start_date}
+                      helperText={errors.start_date?.message}
+                      fullWidth
+                      size="small"
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                    />
+                  )}
+                />
+                <Controller
+                  name="birth_year"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                      value={field.value ?? ''}
+                      label="Birth Year"
+                      type="number"
+                      error={!!errors.birth_year}
+                      helperText={errors.birth_year?.message || 'For age on charts'}
+                      fullWidth
+                      placeholder="1985"
+                      inputProps={{ min: 1900, max: 2020 }}
+                      size="small"
+                    />
+                  )}
+                />
+              </Box>
             </Paper>
 
             {/* Mortgage Parameters */}

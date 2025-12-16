@@ -21,6 +21,7 @@ interface InteractiveBalanceChartProps {
   mortgageBalance: number[]
   savingsBalance: number[]
   startDate: string
+  birthYear?: number
   maxPeriod: number // Maximum period index (total months in simulation)
 }
 
@@ -32,8 +33,11 @@ export const InteractiveBalanceChart: React.FC<InteractiveBalanceChartProps> = (
   mortgageBalance,
   savingsBalance,
   startDate,
+  birthYear,
   maxPeriod,
 }) => {
+  // Calculate starting age if birth year is provided
+  const startingAge = birthYear ? new Date(startDate).getFullYear() - birthYear : undefined
   const chartRef = useRef<ChartJS<'line'>>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -439,7 +443,13 @@ export const InteractiveBalanceChart: React.FC<InteractiveBalanceChartProps> = (
             title: (items) => {
               if (items.length > 0 && items[0].parsed.x !== null) {
                 const date = new Date(items[0].parsed.x)
-                return formatDateLabel(date)
+                let title = formatDateLabel(date)
+                if (startingAge !== undefined) {
+                  const yearsFromStart = (date.getTime() - new Date(startDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+                  const age = Math.floor(startingAge + yearsFromStart)
+                  title += ` (Age ${age})`
+                }
+                return title
               }
               return ''
             },
@@ -465,6 +475,24 @@ export const InteractiveBalanceChart: React.FC<InteractiveBalanceChartProps> = (
             maxTicksLimit: 12,
           },
         },
+        xAge: startingAge !== undefined ? {
+          type: 'linear' as const,
+          position: 'top' as const,
+          title: {
+            display: true,
+            text: 'Age',
+            font: { size: 11 },
+          },
+          min: startingAge,
+          max: startingAge + (years.length > 0 ? years[years.length - 1] : 0),
+          ticks: {
+            stepSize: 5,
+            callback: (value) => Math.floor(value as number),
+          },
+          grid: {
+            display: false,
+          },
+        } : undefined,
         y: {
           ...commonChartOptions.scales.y,
           ticks: {
@@ -476,7 +504,7 @@ export const InteractiveBalanceChart: React.FC<InteractiveBalanceChartProps> = (
       // Disable built-in click handler
       onClick: undefined,
     }
-  }, [chartOverpayments, editingId, startDate, pendingOverpayment, isNewOverpayment])
+  }, [chartOverpayments, editingId, startDate, pendingOverpayment, isNewOverpayment, startingAge, years])
 
   return (
     <Box ref={containerRef} sx={{ position: 'relative', width: '100%', height: '100%' }}>

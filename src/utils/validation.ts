@@ -11,6 +11,12 @@ export const mortgageFormSchema = z.object({
       return !isNaN(parsedDate.getTime())
     }, 'Please enter a valid date'),
 
+  // Optional birth year for age display on charts
+  birth_year: z
+    .union([z.number().int().min(1900).max(2020), z.nan()])
+    .optional()
+    .transform((val) => (val && !isNaN(val) ? val : undefined)),
+
   // Mortgage parameters
   mortgage_amount: z
     .number()
@@ -117,6 +123,7 @@ const getTodayDate = () => {
 // Default form values
 export const defaultFormValues: MortgageFormData = {
   start_date: getTodayDate(),
+  birth_year: undefined,
   mortgage_amount: 200000,
   term_years: 25,
   fixed_rate: 1.65,
