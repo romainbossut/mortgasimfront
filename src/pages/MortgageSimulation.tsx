@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { track } from '@vercel/analytics'
 import {
   Box,
   Container,
   Typography,
-  Chip,
   Button,
   Alert,
   CircularProgress,
@@ -14,10 +12,8 @@ import {
   Paper,
 } from '@mui/material'
 import {
-  CheckCircle,
   Error,
   FileDownload,
-  CloudOff,
   TrendingUp,
 } from '@mui/icons-material'
 import { MortgageForm } from '../components/MortgageForm'
@@ -108,13 +104,6 @@ export const MortgageSimulation: React.FC = () => {
     })
   }, [])
 
-  // Health check query
-  const healthQuery = useQuery({
-    queryKey: ['health'],
-    queryFn: MortgageApiService.healthCheck,
-    retry: 3,
-    refetchInterval: 300000, // 5 minutes
-  })
 
   // Auto-load saved data on component mount
   useEffect(() => {
@@ -232,78 +221,24 @@ export const MortgageSimulation: React.FC = () => {
     }
   }
 
-  const getApiStatusChip = () => {
-    if (healthQuery.isLoading) {
-      return (
-        <Chip
-          icon={<CircularProgress size={14} />}
-          label="Checking API..."
-          color="warning"
-          variant="outlined"
-          size="small"
-          sx={{ fontSize: '0.75rem' }}
-        />
-      )
-    }
-
-    if (healthQuery.isError) {
-      return (
-        <Chip
-          icon={<CloudOff sx={{ fontSize: 14 }} />}
-          label="API Offline"
-          color="error"
-          variant="outlined"
-          size="small"
-          sx={{ fontSize: '0.75rem' }}
-        />
-      )
-    }
-
-    return (
-      <Chip
-        icon={<CheckCircle sx={{ fontSize: 14 }} />}
-        label="API Online"
-        color="success"
-        variant="outlined"
-        size="small"
-        sx={{ fontSize: '0.75rem' }}
-      />
-    )
-  }
-
   // Show recalculating indicator when debouncing or simulating from chart interaction
   const isRecalculating = isDebouncing || (isSimulating && chartOverpayments.length > 0)
 
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
-      {/* Subtle Header */}
-      <Paper
-        elevation={0}
+      {/* Minimal Header */}
+      <Box
         sx={{
-          backgroundColor: 'background.paper',
           borderBottom: '1px solid',
           borderColor: 'divider',
-          py: 2,
+          py: 1,
+          px: { xs: 2, sm: 3, md: 4 },
         }}
       >
-        <Container maxWidth={false} sx={{ px: { xs: 2, sm: 3, md: 4 } }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="h6" fontWeight={500} color="text.primary">
-                Mortgage, Savings & Overpayment Simulator
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Model mortgage payments, savings growth, overpayment strategies, and net worth
-                evolution
-              </Typography>
-            </Box>
-
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              {getApiStatusChip()}
-            </Box>
-          </Box>
-        </Container>
-      </Paper>
+        <Typography variant="subtitle1" fontWeight={500} color="text.secondary">
+          Mortgage & Savings Simulator
+        </Typography>
+      </Box>
 
       <Container maxWidth={false} sx={{ py: 4, px: { xs: 2, sm: 3, md: 4 } }}>
         {/* Error Display */}

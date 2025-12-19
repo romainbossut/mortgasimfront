@@ -42,6 +42,24 @@ export const chartColors = {
   grid: 'rgba(0, 0, 0, 0.1)',
 }
 
+// Colors for multiple savings accounts (up to 10)
+export const accountColors = [
+  '#4caf50', // green
+  '#2196f3', // blue
+  '#9c27b0', // purple
+  '#ff9800', // orange
+  '#00bcd4', // cyan
+  '#e91e63', // pink
+  '#3f51b5', // indigo
+  '#009688', // teal
+  '#795548', // brown
+  '#607d8b', // blue grey
+]
+
+export const getAccountColor = (index: number): string => {
+  return accountColors[index % accountColors.length]
+}
+
 // Common chart options
 export const commonChartOptions = {
   responsive: true,

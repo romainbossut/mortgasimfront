@@ -49,19 +49,22 @@ export const mortgageFormSchema = z.object({
     .optional()
     .transform((val) => val && !isNaN(val) ? val : undefined),
 
-  // Savings parameters
-  savings_rate: z
-    .number()
-    .min(0, 'Savings rate cannot be negative')
-    .max(15, 'Savings rate cannot exceed 15%'),
-  
-  monthly_contribution: z
-    .number()
-    .min(0, 'Monthly contribution cannot be negative'),
-  
-  initial_balance: z
-    .number()
-    .min(0, 'Initial balance cannot be negative'),
+  // Savings accounts - array of accounts with name, rate, contribution, initial_balance
+  savings_accounts: z
+    .array(z.object({
+      name: z.string().min(1, 'Account name is required').max(50, 'Account name too long'),
+      rate: z.number().min(0, 'Rate cannot be negative').max(15, 'Rate cannot exceed 15%'),
+      monthly_contribution: z.number().min(0, 'Contribution cannot be negative'),
+      initial_balance: z.number().min(0, 'Initial balance cannot be negative'),
+    }))
+    .min(0, 'At least one account can be added')
+    .max(10, 'Maximum 10 accounts allowed')
+    .default([{
+      name: 'Savings',
+      rate: 4.3,
+      monthly_contribution: 2500,
+      initial_balance: 170000
+    }]),
 
   // Simulation parameters
   typical_payment: z
@@ -112,6 +115,14 @@ export type CustomOverpayment = {
   amount: number
 }
 
+// Helper type for savings accounts
+export type SavingsAccountFormData = {
+  name: string
+  rate: number
+  monthly_contribution: number
+  initial_balance: number
+}
+
 export type MortgageFormData = z.infer<typeof mortgageFormSchema>
 
 // Get today's date in YYYY-MM-DD format
@@ -129,9 +140,12 @@ export const defaultFormValues: MortgageFormData = {
   fixed_rate: 1.65,
   fixed_term_months: 24,
   variable_rate: 6.0,
-  savings_rate: 4.3,
-  monthly_contribution: 2500,
-  initial_balance: 170000,
+  savings_accounts: [{
+    name: 'Savings',
+    rate: 4.3,
+    monthly_contribution: 2500,
+    initial_balance: 170000
+  }],
   typical_payment: 878,
   asset_value: 360000,
   show_years_after_payoff: 5,
@@ -216,7 +230,7 @@ export const getMonthName = (monthNumber: number): string => {
 
 // Local storage utilities with validation
 const STORAGE_KEY = 'mortgasim_form_data'
-const STORAGE_VERSION = '1.0.0' // Update this when form schema changes
+const STORAGE_VERSION = '2.0.0' // Updated for multi-account savings support
 
 interface StoredFormData {
   version: string

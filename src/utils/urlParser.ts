@@ -109,10 +109,10 @@ export function encodeFormDataToUrl(data: MortgageFormData): string {
     params.set('max_payment_after_fixed', data.max_payment_after_fixed.toString());
   }
   
-  // Savings parameters
-  params.set('savings_rate', data.savings_rate.toString());
-  params.set('monthly_contribution', data.monthly_contribution.toString());
-  params.set('initial_balance', data.initial_balance.toString());
+  // Savings accounts - encode as JSON
+  if (data.savings_accounts && data.savings_accounts.length > 0) {
+    params.set('savings_accounts', JSON.stringify(data.savings_accounts));
+  }
   
   // Simulation parameters
   params.set('typical_payment', data.typical_payment.toString());
@@ -184,9 +184,23 @@ export function decodeFormDataFromUrl(searchParams: URLSearchParams): Partial<Mo
   data.variable_rate = parseNumber(searchParams.get('variable_rate'), 0, 15);
   data.max_payment_after_fixed = parseNumber(searchParams.get('max_payment_after_fixed'), 0);
   
-  data.savings_rate = parseNumber(searchParams.get('savings_rate'), 0, 15);
-  data.monthly_contribution = parseNumber(searchParams.get('monthly_contribution'), 0);
-  data.initial_balance = parseNumber(searchParams.get('initial_balance'), 0);
+  // Parse savings accounts from JSON
+  const savingsAccountsStr = searchParams.get('savings_accounts');
+  if (savingsAccountsStr) {
+    try {
+      const accounts = JSON.parse(savingsAccountsStr);
+      if (Array.isArray(accounts) && accounts.length > 0) {
+        data.savings_accounts = accounts.filter(acc =>
+          typeof acc.name === 'string' && acc.name.length > 0 &&
+          typeof acc.rate === 'number' && acc.rate >= 0 && acc.rate <= 15 &&
+          typeof acc.monthly_contribution === 'number' && acc.monthly_contribution >= 0 &&
+          typeof acc.initial_balance === 'number' && acc.initial_balance >= 0
+        );
+      }
+    } catch (error) {
+      console.warn('Failed to parse savings accounts from URL:', error);
+    }
+  }
   
   data.typical_payment = parseNumber(searchParams.get('typical_payment'), 0);
   data.asset_value = parseNumber(searchParams.get('asset_value'), 0);
