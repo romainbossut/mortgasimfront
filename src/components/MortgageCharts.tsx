@@ -56,7 +56,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
 
   // Initialize selected accounts when chart data changes
   useEffect(() => {
-    if (chartData?.accounts && chartData.accounts.length > 0) {
+    if (chartData?.accounts?.length > 0) {
       setSelectedAccounts(chartData.accounts.map((acc) => acc.name))
     }
   }, [chartData?.accounts])

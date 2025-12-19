@@ -254,8 +254,9 @@ export const DynamicMortgagePage: React.FC = () => {
     setLastSimulationRequest(request)
     
     // Track manual form submission
-    const totalInitialBalance = formData.savings_accounts.reduce((sum, acc) => sum + acc.initial_balance, 0)
-    const totalMonthlyContribution = formData.savings_accounts.reduce((sum, acc) => sum + acc.monthly_contribution, 0)
+    const accounts = formData.savings_accounts || []
+    const totalInitialBalance = accounts.reduce((sum, acc) => sum + acc.initial_balance, 0)
+    const totalMonthlyContribution = accounts.reduce((sum, acc) => sum + acc.monthly_contribution, 0)
     track('mortgage_form_submitted', {
       loan_amount: formData.mortgage_amount.toString(),
       term_years: formData.term_years.toString(),
@@ -263,7 +264,7 @@ export const DynamicMortgagePage: React.FC = () => {
       variable_rate: formData.variable_rate.toString(),
       initial_balance: totalInitialBalance.toString(),
       monthly_contribution: totalMonthlyContribution.toString(),
-      num_accounts: formData.savings_accounts.length.toString(),
+      num_accounts: accounts.length.toString(),
       is_manual_submission: true,
     })
     

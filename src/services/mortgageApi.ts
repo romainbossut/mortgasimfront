@@ -122,7 +122,7 @@ export const transformFormDataToRequest = (formData: MortgageFormData): Simulati
       max_payment_after_fixed: formData.max_payment_after_fixed || null,
     },
     savings: {
-      accounts: formData.savings_accounts.map(acc => ({
+      accounts: (formData.savings_accounts || []).map(acc => ({
         name: acc.name,
         rate: acc.rate,
         monthly_contribution: acc.monthly_contribution,
