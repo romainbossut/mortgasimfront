@@ -180,6 +180,27 @@ export const dateToPeriodIndex = (date: Date, startDate: string): number => {
   return monthsDiff + 1
 }
 
+// Calculate age in years from birth date to target date
+export const calculateAge = (birthDate: string, targetDate: Date): number => {
+  const birth = new Date(birthDate)
+  let age = targetDate.getFullYear() - birth.getFullYear()
+  const monthDiff = targetDate.getMonth() - birth.getMonth()
+  if (monthDiff < 0 || (monthDiff === 0 && targetDate.getDate() < birth.getDate())) {
+    age--
+  }
+  return age
+}
+
+// Create tooltip title with optional age display
+export const createTooltipTitle = (date: Date, birthDate?: string): string => {
+  let title = formatDateLabel(date)
+  if (birthDate) {
+    const age = calculateAge(birthDate, date)
+    title += ` (Age ${age})`
+  }
+  return title
+}
+
 // Create annotation config for overpayment line
 export const createOverpaymentAnnotation = (
   date: Date,

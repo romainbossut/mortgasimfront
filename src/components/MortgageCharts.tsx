@@ -11,21 +11,23 @@ import {
 import { DataGrid } from '@mui/x-data-grid'
 import type { GridColDef } from '@mui/x-data-grid'
 import { InfoOutlined } from '@mui/icons-material'
-import type { ChartData, SummaryStatistics } from '../types/mortgage'
+import type { ChartData, SummaryStatistics, AccountCategory } from '../types/mortgage'
+import type { SavingsAccountFormData } from '../utils/validation'
 
 // Import Chart.js setup (registers components)
 import '../utils/chartSetup'
 import { getAccountColor } from '../utils/chartSetup'
 
 // Import Chart.js components
-import { InteractiveBalanceChart, NetWorthChart, PaymentScheduleChart, LTVChart, PerAccountSavingsChart } from './charts'
+import { InteractiveBalanceChart, NetWorthChart, PaymentScheduleChart, LTVChart, PerAccountSavingsChart, CategoryAllocationChart } from './charts'
 
 interface MortgageChartsProps {
   chartData: ChartData
   summaryStats: SummaryStatistics
   startDate: string // Start date in YYYY-MM-DD format
-  birthYear?: number // Optional birth year for age display on charts
+  birthDate?: string // Optional birth date for age display on charts (YYYY-MM-DD)
   assetValue: number // Property value for LTV calculation
+  savingsAccounts?: SavingsAccountFormData[] // Savings accounts from form (for categories)
   notes?: string[] // Notes/warnings to display under summary
   isLoading?: boolean
   isRecalculating?: boolean // Show subtle indicator when recalculating due to overpayment changes
@@ -35,8 +37,9 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
   chartData,
   summaryStats,
   startDate,
-  birthYear,
+  birthDate,
   assetValue,
+  savingsAccounts = [],
   notes,
   isLoading = false,
   isRecalculating = false,
@@ -69,6 +72,29 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
         : [...prev, accountName]
     )
   }
+
+  // Merge categories from form data into chart accounts
+  const accountsWithCategories = useMemo(() => {
+    if (!chartData?.accounts) return []
+
+    // Create a lookup map from form data
+    const categoryMap = new Map<string, AccountCategory>()
+    savingsAccounts.forEach((acc) => {
+      categoryMap.set(acc.name, acc.category)
+    })
+
+    // Merge categories into chart data
+    return chartData.accounts.map((account) => ({
+      ...account,
+      category: categoryMap.get(account.name) || 'cash_savings' as AccountCategory,
+    }))
+  }, [chartData?.accounts, savingsAccounts])
+
+  // Check if we have multiple categories
+  const hasMultipleCategories = useMemo(() => {
+    const categories = new Set(accountsWithCategories.map((acc) => acc.category))
+    return categories.size > 1
+  }, [accountsWithCategories])
 
   if (isLoading) {
     return (
@@ -413,7 +439,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
               mortgageBalance={processedData.mortgageBalance}
               savingsBalance={processedData.savingsBalance}
               startDate={startDate}
-              birthYear={birthYear}
+              birthDate={birthDate}
               maxPeriod={processedData.maxPeriod}
             />
           </Box>
@@ -431,7 +457,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
               years={processedData.years}
               netWorth={processedData.netWorth}
               startDate={startDate}
-              birthYear={birthYear}
+              birthDate={birthDate}
             />
           </Box>
         </CardContent>
@@ -472,7 +498,26 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
                 accounts={chartData.accounts}
                 selectedAccounts={selectedAccounts}
                 startDate={startDate}
-                birthYear={birthYear}
+                birthDate={birthDate}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Category Allocation Chart - only show when multiple categories exist */}
+      {hasMultipleCategories && accountsWithCategories.length > 0 && (
+        <Card elevation={3}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+              Savings Allocation by Category
+            </Typography>
+            <Box sx={{ height: 350 }}>
+              <CategoryAllocationChart
+                years={processedData.years}
+                accounts={accountsWithCategories}
+                startDate={startDate}
+                birthDate={birthDate}
               />
             </Box>
           </CardContent>
@@ -490,7 +535,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
               years={processedData.years}
               ltvValues={processedData.ltv}
               startDate={startDate}
-              birthYear={birthYear}
+              birthDate={birthDate}
             />
           </Box>
         </CardContent>
@@ -507,7 +552,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
               years={processedData.years}
               monthlyPayments={processedData.monthlyPayments}
               startDate={startDate}
-              birthYear={birthYear}
+              birthDate={birthDate}
             />
           </Box>
         </CardContent>

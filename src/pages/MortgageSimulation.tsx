@@ -22,7 +22,7 @@ import { MortgageApiService, transformFormDataToRequest } from '../services/mort
 import { useDebouncedSimulation } from '../hooks/useDebouncedSimulation'
 import { useOverpaymentStore } from '../store/overpaymentStore'
 import { defaultFormValues } from '../utils/validation'
-import type { MortgageFormData } from '../utils/validation'
+import type { MortgageFormData, SavingsAccountFormData } from '../utils/validation'
 import type { SimulationResponse, SimulationRequest } from '../types/mortgage'
 
 const STORAGE_KEY = 'mortgasim-form-values'
@@ -52,8 +52,9 @@ export const MortgageSimulation: React.FC = () => {
   const [simulationResults, setSimulationResults] = useState<SimulationResponse | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
   const [currentStartDate, setCurrentStartDate] = useState<string>('')
-  const [currentBirthYear, setCurrentBirthYear] = useState<number | undefined>(undefined)
+  const [currentBirthDate, setCurrentBirthDate] = useState<string | undefined>(undefined)
   const [currentAssetValue, setCurrentAssetValue] = useState<number>(360000)
+  const [currentSavingsAccounts, setCurrentSavingsAccounts] = useState<SavingsAccountFormData[]>([])
   const [lastSimulationRequest, setLastSimulationRequest] = useState<SimulationRequest | null>(null)
 
   // Ref to track if we've done initial load
@@ -114,8 +115,9 @@ export const MortgageSimulation: React.FC = () => {
       const formValues = savedValues || defaultFormValues
 
       setCurrentStartDate(formValues.start_date)
-      setCurrentBirthYear(formValues.birth_year)
+      setCurrentBirthDate(formValues.birth_date)
       setCurrentAssetValue(formValues.asset_value)
+      setCurrentSavingsAccounts(formValues.savings_accounts || [])
       const request = transformFormDataToRequest(formValues)
 
       // Include any persisted overpayments from the store
@@ -157,8 +159,9 @@ export const MortgageSimulation: React.FC = () => {
   const handleFormSubmit = useCallback(
     (formData: MortgageFormData) => {
       setCurrentStartDate(formData.start_date)
-      setCurrentBirthYear(formData.birth_year)
+      setCurrentBirthDate(formData.birth_date)
       setCurrentAssetValue(formData.asset_value)
+      setCurrentSavingsAccounts(formData.savings_accounts || [])
 
       const request = transformFormDataToRequest(formData)
 
@@ -317,8 +320,9 @@ export const MortgageSimulation: React.FC = () => {
                   chartData={simulationResults.chart_data}
                   summaryStats={simulationResults.summary_statistics}
                   startDate={currentStartDate}
-                  birthYear={currentBirthYear}
+                  birthDate={currentBirthDate}
                   assetValue={currentAssetValue}
+                  savingsAccounts={currentSavingsAccounts}
                   notes={warnings.length > 0 ? warnings : undefined}
                   isLoading={false}
                   isRecalculating={isRecalculating}

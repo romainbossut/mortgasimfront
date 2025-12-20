@@ -7,24 +7,22 @@ import {
   formatCurrency,
   formatYAxisPayment,
   yearsToDate,
-  formatDateLabel,
+  createTooltipTitle,
 } from '../../utils/chartSetup'
 
 interface PaymentScheduleChartProps {
   years: number[]
   monthlyPayments: number[]
   startDate: string
-  birthYear?: number
+  birthDate?: string
 }
 
 export const PaymentScheduleChart: React.FC<PaymentScheduleChartProps> = ({
   years,
   monthlyPayments,
   startDate,
-  birthYear,
+  birthDate,
 }) => {
-  // Calculate starting age if birth year is provided
-  const startingAge = birthYear ? new Date(startDate).getFullYear() - birthYear : undefined
   const data = useMemo(() => {
     const dates = years.map((y) => yearsToDate(y, startDate))
 
@@ -53,14 +51,7 @@ export const PaymentScheduleChart: React.FC<PaymentScheduleChartProps> = ({
           callbacks: {
             title: (items) => {
               if (items.length > 0 && items[0].parsed.x !== null) {
-                const date = new Date(items[0].parsed.x)
-                let title = formatDateLabel(date)
-                if (startingAge !== undefined) {
-                  const yearsFromStart = (date.getTime() - new Date(startDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-                  const age = Math.floor(startingAge + yearsFromStart)
-                  title += ` (Age ${age})`
-                }
-                return title
+                return createTooltipTitle(new Date(items[0].parsed.x), birthDate)
               }
               return ''
             },
@@ -85,24 +76,6 @@ export const PaymentScheduleChart: React.FC<PaymentScheduleChartProps> = ({
             maxTicksLimit: 12,
           },
         },
-        xAge: startingAge !== undefined ? {
-          type: 'linear' as const,
-          position: 'top' as const,
-          title: {
-            display: true,
-            text: 'Age',
-            font: { size: 11 },
-          },
-          min: startingAge,
-          max: startingAge + (years.length > 0 ? years[years.length - 1] : 0),
-          ticks: {
-            stepSize: 5,
-            callback: (value) => Math.floor(value as number),
-          },
-          grid: {
-            display: false,
-          },
-        } : undefined,
         y: {
           ...commonChartOptions.scales.y,
           min: 0,
@@ -113,7 +86,7 @@ export const PaymentScheduleChart: React.FC<PaymentScheduleChartProps> = ({
         },
       },
     }),
-    [startingAge, startDate, years]
+    [birthDate]
   )
 
   return <Line data={data} options={options} />

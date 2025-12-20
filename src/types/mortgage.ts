@@ -1,5 +1,14 @@
 // Types based on the OpenAPI specification for Mortgage Simulation API
 
+// Account category types
+export type AccountCategory = 'cash_isa' | 'cash_savings' | 'investment'
+
+export const ACCOUNT_CATEGORIES: { value: AccountCategory; label: string }[] = [
+  { value: 'cash_savings', label: 'Cash Savings' },
+  { value: 'cash_isa', label: 'Cash ISA' },
+  { value: 'investment', label: 'Investment' },
+]
+
 export interface MortgageParameters {
   amount: number // Initial mortgage amount in pounds
   term_years: number // Mortgage term in years (max 40)
@@ -12,6 +21,7 @@ export interface MortgageParameters {
 // Individual savings/investment account
 export interface SavingsAccount {
   name: string // Account name (e.g., 'ISA', 'SIPP')
+  category?: AccountCategory // Account category (frontend-only, not sent to API)
   rate: number // Annual interest rate as percentage
   monthly_contribution: number // Monthly contribution in pounds
   initial_balance: number // Initial balance in pounds
@@ -62,6 +72,7 @@ export interface MonthlyData {
 // Per-account chart data
 export interface AccountChartData {
   name: string // Account name
+  category?: AccountCategory // Account category (set from form data)
   balance: number[] // Account balance over time
   interest_received: number[] // Interest received per month
   contributions: number[] // Contributions per month

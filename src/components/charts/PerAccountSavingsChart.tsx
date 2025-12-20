@@ -6,7 +6,7 @@ import {
   formatCurrency,
   formatCurrencyAbbreviated,
   yearsToDate,
-  formatDateLabel,
+  createTooltipTitle,
   getAccountColor,
 } from '../../utils/chartSetup'
 import type { AccountChartData } from '../../types/mortgage'
@@ -16,7 +16,7 @@ interface PerAccountSavingsChartProps {
   accounts: AccountChartData[]
   selectedAccounts: string[]
   startDate: string
-  birthYear?: number
+  birthDate?: string
 }
 
 export const PerAccountSavingsChart: React.FC<PerAccountSavingsChartProps> = ({
@@ -24,10 +24,8 @@ export const PerAccountSavingsChart: React.FC<PerAccountSavingsChartProps> = ({
   accounts,
   selectedAccounts,
   startDate,
-  birthYear,
+  birthDate,
 }) => {
-  const startingAge = birthYear ? new Date(startDate).getFullYear() - birthYear : undefined
-
   const data = useMemo(() => {
     const dates = years.map((y) => yearsToDate(y, startDate))
 
@@ -71,14 +69,7 @@ export const PerAccountSavingsChart: React.FC<PerAccountSavingsChartProps> = ({
           callbacks: {
             title: (items) => {
               if (items.length > 0 && items[0].parsed.x !== null) {
-                const date = new Date(items[0].parsed.x)
-                let title = formatDateLabel(date)
-                if (startingAge !== undefined) {
-                  const yearsFromStart = (date.getTime() - new Date(startDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)
-                  const age = Math.floor(startingAge + yearsFromStart)
-                  title += ` (Age ${age})`
-                }
-                return title
+                return createTooltipTitle(new Date(items[0].parsed.x), birthDate)
               }
               return ''
             },
@@ -103,24 +94,6 @@ export const PerAccountSavingsChart: React.FC<PerAccountSavingsChartProps> = ({
             maxTicksLimit: 12,
           },
         },
-        xAge: startingAge !== undefined ? {
-          type: 'linear' as const,
-          position: 'top' as const,
-          title: {
-            display: true,
-            text: 'Age',
-            font: { size: 11 },
-          },
-          min: startingAge,
-          max: startingAge + (years.length > 0 ? years[years.length - 1] : 0),
-          ticks: {
-            stepSize: 5,
-            callback: (value) => Math.floor(value as number),
-          },
-          grid: {
-            display: false,
-          },
-        } : undefined,
         y: {
           ...commonChartOptions.scales.y,
           ticks: {
@@ -130,7 +103,7 @@ export const PerAccountSavingsChart: React.FC<PerAccountSavingsChartProps> = ({
         },
       },
     }),
-    [startingAge, startDate, years]
+    [birthDate]
   )
 
   if (data.datasets.length === 0) {

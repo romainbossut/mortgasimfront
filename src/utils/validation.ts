@@ -11,11 +11,11 @@ export const mortgageFormSchema = z.object({
       return !isNaN(parsedDate.getTime())
     }, 'Please enter a valid date'),
 
-  // Optional birth year for age display on charts
-  birth_year: z
-    .union([z.number().int().min(1900).max(2020), z.nan()])
+  // Optional birth date for age display on charts
+  birth_date: z
+    .string()
     .optional()
-    .transform((val) => (val && !isNaN(val) ? val : undefined)),
+    .refine((date) => !date || !isNaN(new Date(date).getTime()), 'Please enter a valid date'),
 
   // Mortgage parameters
   mortgage_amount: z
@@ -49,10 +49,11 @@ export const mortgageFormSchema = z.object({
     .optional()
     .transform((val) => val && !isNaN(val) ? val : undefined),
 
-  // Savings accounts - array of accounts with name, rate, contribution, initial_balance
+  // Savings accounts - array of accounts with name, category, rate, contribution, initial_balance
   savings_accounts: z
     .array(z.object({
       name: z.string().min(1, 'Account name is required').max(50, 'Account name too long'),
+      category: z.enum(['cash_savings', 'cash_isa', 'investment']).default('cash_savings'),
       rate: z.number().min(0, 'Rate cannot be negative').max(15, 'Rate cannot exceed 15%'),
       monthly_contribution: z.number().min(0, 'Contribution cannot be negative'),
       initial_balance: z.number().min(0, 'Initial balance cannot be negative'),
@@ -61,6 +62,7 @@ export const mortgageFormSchema = z.object({
     .max(10, 'Maximum 10 accounts allowed')
     .default([{
       name: 'Savings',
+      category: 'cash_savings' as const,
       rate: 4.3,
       monthly_contribution: 2500,
       initial_balance: 170000
@@ -118,6 +120,7 @@ export type CustomOverpayment = {
 // Helper type for savings accounts
 export type SavingsAccountFormData = {
   name: string
+  category: 'cash_savings' | 'cash_isa' | 'investment'
   rate: number
   monthly_contribution: number
   initial_balance: number
@@ -134,7 +137,7 @@ const getTodayDate = () => {
 // Default form values
 export const defaultFormValues: MortgageFormData = {
   start_date: getTodayDate(),
-  birth_year: undefined,
+  birth_date: undefined,
   mortgage_amount: 200000,
   term_years: 25,
   fixed_rate: 1.65,
@@ -142,6 +145,7 @@ export const defaultFormValues: MortgageFormData = {
   variable_rate: 6.0,
   savings_accounts: [{
     name: 'Savings',
+    category: 'cash_savings' as const,
     rate: 4.3,
     monthly_contribution: 2500,
     initial_balance: 170000

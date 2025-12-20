@@ -13,6 +13,10 @@ import {
   Alert,
   IconButton,
   Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material'
 import {
   Calculate,
@@ -32,6 +36,7 @@ import {
 } from '../utils/validation'
 import { generateShareableLink, copyToClipboard } from '../utils/urlParser'
 import type { MortgageFormData } from '../utils/validation'
+import { ACCOUNT_CATEGORIES } from '../types/mortgage'
 
 const STORAGE_KEY = 'mortgasim-form-values'
 
@@ -98,6 +103,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
   const handleAddAccount = () => {
     appendAccount({
       name: `Account ${accountFields.length + 1}`,
+      category: 'cash_savings' as const,
       rate: 4.0,
       monthly_contribution: 0,
       initial_balance: 0,
@@ -242,21 +248,21 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   )}
                 />
                 <Controller
-                  name="birth_year"
+                  name="birth_date"
                   control={control}
                   render={({ field }) => (
                     <TextField
                       {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
                       value={field.value ?? ''}
-                      label="Birth Year"
-                      type="number"
-                      error={!!errors.birth_year}
-                      helperText={errors.birth_year?.message || 'For age on charts'}
+                      label="Birth Date"
+                      type="date"
+                      error={!!errors.birth_date}
+                      helperText={errors.birth_date?.message || 'For age on charts'}
                       fullWidth
-                      placeholder="1985"
-                      inputProps={{ min: 1900, max: 2020 }}
                       size="small"
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
                     />
                   )}
                 />
@@ -423,7 +429,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                       key={field.id}
                       sx={{
                         display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: '1.5fr 1fr 1fr 0.8fr auto' },
+                        gridTemplateColumns: { xs: '1fr', sm: '1.2fr 1fr 1fr 1fr 0.7fr auto' },
                         gap: 1,
                         alignItems: 'start',
                         p: 1,
@@ -445,6 +451,27 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                             placeholder="ISA"
                             size="small"
                           />
+                        )}
+                      />
+
+                      <Controller
+                        name={`savings_accounts.${index}.category`}
+                        control={control}
+                        render={({ field: inputField }) => (
+                          <FormControl fullWidth size="small">
+                            <InputLabel>Type</InputLabel>
+                            <Select
+                              {...inputField}
+                              label="Type"
+                              value={inputField.value || 'cash_savings'}
+                            >
+                              {ACCOUNT_CATEGORIES.map((cat) => (
+                                <MenuItem key={cat.value} value={cat.value}>
+                                  {cat.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
                         )}
                       />
 
