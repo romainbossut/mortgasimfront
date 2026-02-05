@@ -134,9 +134,12 @@ export const transformFormDataToRequest = (formData: MortgageFormData): Simulati
       deals,
     },
     savings: {
-      rate: formData.savings_rate,
-      monthly_contribution: formData.monthly_contribution,
-      initial_balance: formData.initial_balance,
+      accounts: formData.savings_accounts.map(acc => ({
+        name: acc.name,
+        rate: acc.rate,
+        monthly_contribution: acc.monthly_contribution,
+        initial_balance: acc.initial_balance,
+      })),
     },
     simulation: {
       typical_payment: formData.typical_payment,

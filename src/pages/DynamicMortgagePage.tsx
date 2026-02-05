@@ -1,25 +1,21 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation } from '@tanstack/react-query'
 import { track } from '@vercel/analytics'
 import {
   Box,
   Container,
   Typography,
-  Chip,
   Button,
   Alert,
   CircularProgress,
   Card,
   CardContent,
-  Paper,
   Snackbar,
 } from '@mui/material'
 import {
-  CheckCircle,
   Error,
   FileDownload,
-  CloudOff,
   TrendingUp,
   Share,
 } from '@mui/icons-material'
@@ -226,14 +222,6 @@ export const DynamicMortgagePage: React.FC = () => {
     },
   })
 
-  // Health check query
-  const healthQuery = useQuery({
-    queryKey: ['health'],
-    queryFn: MortgageApiService.healthCheck,
-    retry: 3,
-    refetchInterval: 300000, // 5 minutes
-  })
-
   // Auto-run simulation with URL parameters on mount
   useEffect(() => {
     const runInitialSimulation = async () => {
@@ -266,13 +254,16 @@ export const DynamicMortgagePage: React.FC = () => {
     setLastSimulationRequest(request)
     
     // Track manual form submission
+    const totalInitialBalance = formData.savings_accounts.reduce((sum, acc) => sum + acc.initial_balance, 0)
+    const totalMonthlyContribution = formData.savings_accounts.reduce((sum, acc) => sum + acc.monthly_contribution, 0)
     track('mortgage_form_submitted', {
       loan_amount: formData.mortgage_amount.toString(),
       term_years: formData.term_years.toString(),
       fixed_rate: formData.fixed_rate.toString(),
       variable_rate: formData.variable_rate.toString(),
-      initial_balance: formData.initial_balance.toString(),
-      monthly_contribution: formData.monthly_contribution.toString(),
+      initial_balance: totalInitialBalance.toString(),
+      monthly_contribution: totalMonthlyContribution.toString(),
+      num_accounts: formData.savings_accounts.length.toString(),
       is_manual_submission: true,
     })
     
@@ -353,74 +344,21 @@ export const DynamicMortgagePage: React.FC = () => {
     setShareSnackbar(prev => ({ ...prev, open: false }))
   }
 
-  const getApiStatusChip = () => {
-    if (healthQuery.isLoading) {
-      return (
-        <Chip
-          icon={<CircularProgress size={14} />}
-          label="Checking API..."
-          color="warning"
-          variant="outlined"
-          size="small"
-          sx={{ fontSize: '0.75rem' }}
-        />
-      )
-    }
-    
-    if (healthQuery.isError) {
-      return (
-        <Chip
-          icon={<CloudOff sx={{ fontSize: 14 }} />}
-          label="API Offline"
-          color="error"
-          variant="outlined"
-          size="small"
-          sx={{ fontSize: '0.75rem' }}
-        />
-      )
-    }
-    
-    return (
-      <Chip
-        icon={<CheckCircle sx={{ fontSize: 14 }} />}
-        label="API Online"
-        color="success"
-        variant="outlined"
-        size="small"
-        sx={{ fontSize: '0.75rem' }}
-      />
-    )
-  }
-
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
-      {/* Header with SEO-optimized content */}
-      <Paper 
-        elevation={0} 
-        sx={{ 
-          backgroundColor: 'background.paper',
+      {/* Minimal Header */}
+      <Box
+        sx={{
           borderBottom: '1px solid',
           borderColor: 'divider',
-          py: 2
+          py: 1,
+          px: { xs: 2, sm: 3, md: 4 },
         }}
       >
-        <Container maxWidth="xl">
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Box>
-              <Typography variant="h1" sx={{ fontSize: '1.5rem', fontWeight: 500 }} color="text.primary">
-                {seoData.title}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {seoData.description}
-              </Typography>
-            </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              {getApiStatusChip()}
-            </Box>
-          </Box>
-        </Container>
-      </Paper>
+        <Typography variant="subtitle1" fontWeight={500} color="text.secondary">
+          {seoData.title}
+        </Typography>
+      </Box>
 
       <Container maxWidth="xl" sx={{ py: 4 }}>
         {/* Error Display */}

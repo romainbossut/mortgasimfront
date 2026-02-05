@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Box,
@@ -11,6 +11,8 @@ import {
   Paper,
   Snackbar,
   Alert,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
 import {
   Calculate,
@@ -21,6 +23,8 @@ import {
   PaymentOutlined,
   Share,
   TouchApp,
+  Add,
+  Delete,
 } from '@mui/icons-material'
 import {
   mortgageFormSchema,
@@ -86,6 +90,21 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
     defaultValues: formValues,
     mode: 'onChange',
   })
+
+  // Dynamic savings accounts array
+  const { fields: accountFields, append: appendAccount, remove: removeAccount } = useFieldArray({
+    control,
+    name: 'savings_accounts',
+  })
+
+  const handleAddAccount = () => {
+    appendAccount({
+      name: `Account ${accountFields.length + 1}`,
+      rate: 4.0,
+      monthly_contribution: 0,
+      initial_balance: 0,
+    })
+  }
 
   // Reset form when initialValues change (e.g., from URL parameters)
   useEffect(() => {
@@ -340,71 +359,140 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
               />
             </Paper>
 
-            {/* Savings Parameters */}
+            {/* Savings Accounts */}
             <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(46, 125, 50, 0.02)' }}>
-              <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
-                <Savings color="success" fontSize="small" />
-                Savings Details
-              </Typography>
-
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-                <Controller
-                  name="initial_balance"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                      label="Initial (£)"
-                      type="number"
-                      error={!!errors.initial_balance}
-                      helperText={errors.initial_balance?.message}
-                      fullWidth
-                      placeholder="170000"
-                      inputProps={{ min: 0 }}
-                      size="small"
-                    />
-                  )}
-                />
-
-                <Controller
-                  name="monthly_contribution"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                      label="Monthly (£)"
-                      type="number"
-                      error={!!errors.monthly_contribution}
-                      helperText={errors.monthly_contribution?.message}
-                      fullWidth
-                      placeholder="2500"
-                      inputProps={{ min: 0 }}
-                      size="small"
-                    />
-                  )}
-                />
-
-                <Controller
-                  name="savings_rate"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                      label="Rate (%)"
-                      type="number"
-                      error={!!errors.savings_rate}
-                      helperText={errors.savings_rate?.message}
-                      fullWidth
-                      placeholder="4.3"
-                      inputProps={{ min: 0, max: 15, step: 0.01 }}
-                      size="small"
-                    />
-                  )}
-                />
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 600 }}>
+                  <Savings color="success" fontSize="small" />
+                  Savings Accounts
+                </Typography>
+                <Tooltip title="Add Account">
+                  <IconButton
+                    size="small"
+                    onClick={handleAddAccount}
+                    color="success"
+                    disabled={accountFields.length >= 10}
+                  >
+                    <Add fontSize="small" />
+                  </IconButton>
+                </Tooltip>
               </Box>
+
+              {accountFields.length === 0 ? (
+                <Box sx={{
+                  p: 2,
+                  textAlign: 'center',
+                  backgroundColor: 'rgba(0,0,0,0.02)',
+                  borderRadius: 1,
+                  border: '1px dashed rgba(0,0,0,0.2)'
+                }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No savings accounts. Click + to add one.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {accountFields.map((field, index) => (
+                    <Box
+                      key={field.id}
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '1.5fr 1fr 1fr 0.8fr auto' },
+                        gap: 1,
+                        alignItems: 'start',
+                        p: 1,
+                        backgroundColor: 'rgba(255,255,255,0.5)',
+                        borderRadius: 1,
+                        border: '1px solid rgba(0,0,0,0.08)'
+                      }}
+                    >
+                      <Controller
+                        name={`savings_accounts.${index}.name`}
+                        control={control}
+                        render={({ field: inputField }) => (
+                          <TextField
+                            {...inputField}
+                            label="Name"
+                            error={!!errors.savings_accounts?.[index]?.name}
+                            helperText={errors.savings_accounts?.[index]?.name?.message}
+                            fullWidth
+                            placeholder="ISA"
+                            size="small"
+                          />
+                        )}
+                      />
+
+                      <Controller
+                        name={`savings_accounts.${index}.initial_balance`}
+                        control={control}
+                        render={({ field: inputField }) => (
+                          <TextField
+                            {...inputField}
+                            onChange={(e) => inputField.onChange(e.target.value ? Number(e.target.value) : '')}
+                            label="Initial (£)"
+                            type="number"
+                            error={!!errors.savings_accounts?.[index]?.initial_balance}
+                            helperText={errors.savings_accounts?.[index]?.initial_balance?.message}
+                            fullWidth
+                            placeholder="50000"
+                            inputProps={{ min: 0 }}
+                            size="small"
+                          />
+                        )}
+                      />
+
+                      <Controller
+                        name={`savings_accounts.${index}.monthly_contribution`}
+                        control={control}
+                        render={({ field: inputField }) => (
+                          <TextField
+                            {...inputField}
+                            onChange={(e) => inputField.onChange(e.target.value ? Number(e.target.value) : '')}
+                            label="Monthly (£)"
+                            type="number"
+                            error={!!errors.savings_accounts?.[index]?.monthly_contribution}
+                            helperText={errors.savings_accounts?.[index]?.monthly_contribution?.message}
+                            fullWidth
+                            placeholder="500"
+                            inputProps={{ min: 0 }}
+                            size="small"
+                          />
+                        )}
+                      />
+
+                      <Controller
+                        name={`savings_accounts.${index}.rate`}
+                        control={control}
+                        render={({ field: inputField }) => (
+                          <TextField
+                            {...inputField}
+                            onChange={(e) => inputField.onChange(e.target.value ? Number(e.target.value) : '')}
+                            label="Rate (%)"
+                            type="number"
+                            error={!!errors.savings_accounts?.[index]?.rate}
+                            helperText={errors.savings_accounts?.[index]?.rate?.message}
+                            fullWidth
+                            placeholder="4.0"
+                            inputProps={{ min: 0, max: 15, step: 0.01 }}
+                            size="small"
+                          />
+                        )}
+                      />
+
+                      <Tooltip title="Remove Account">
+                        <IconButton
+                          size="small"
+                          onClick={() => removeAccount(index)}
+                          color="error"
+                          sx={{ mt: 0.5 }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  ))}
+                </Box>
+              )}
             </Paper>
           </Box>
 

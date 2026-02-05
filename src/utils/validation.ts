@@ -1,16 +1,5 @@
 import { z } from 'zod'
 
-// Deal schema
-export const dealSchema = z.object({
-  start_month: z.number().int().min(0, 'Start month cannot be negative'),
-  end_month: z.number().int().min(1, 'End month must be at least 1'),
-  rate: z.number().min(0, 'Rate cannot be negative').max(15, 'Rate cannot exceed 15%'),
-}).refine((deal) => deal.end_month > deal.start_month, {
-  message: 'End month must be after start month',
-})
-
-export type DealFormData = z.infer<typeof dealSchema>
-
 // Zod schema for mortgage form validation
 export const mortgageFormSchema = z.object({
   // Start date for the simulation
@@ -33,50 +22,54 @@ export const mortgageFormSchema = z.object({
     .number()
     .positive('Mortgage amount must be positive')
     .min(1000, 'Mortgage amount must be at least £1,000'),
-
+  
   term_years: z
     .number()
     .positive('Term must be positive')
     .max(40, 'Term cannot exceed 40 years')
     .min(1, 'Term must be at least 1 year'),
-
+  
   fixed_rate: z
     .number()
     .min(0, 'Fixed rate cannot be negative')
     .max(15, 'Fixed rate cannot exceed 15%'),
-
+  
   fixed_term_months: z
     .number()
     .int('Fixed term must be a whole number of months')
     .min(0, 'Fixed term cannot be negative'),
-
+  
   variable_rate: z
     .number()
     .min(0, 'Variable rate cannot be negative')
     .max(15, 'Variable rate cannot exceed 15%'),
 
-  // Multi-deal support
+  // Deals - array of fixed-rate deal periods
   deals: z
     .array(z.object({
-      start_month: z.number().int().min(0),
-      end_month: z.number().int().min(1),
-      rate: z.number().min(0).max(15),
+      start_month: z.number().int().min(0, 'Start month cannot be negative'),
+      end_month: z.number().int().min(1, 'End month must be at least 1'),
+      rate: z.number().min(0, 'Rate cannot be negative').max(15, 'Rate cannot exceed 15%'),
     }))
+    .optional()
     .default([{ start_month: 0, end_month: 24, rate: 1.65 }]),
 
-  // Savings parameters
-  savings_rate: z
-    .number()
-    .min(0, 'Savings rate cannot be negative')
-    .max(15, 'Savings rate cannot exceed 15%'),
-  
-  monthly_contribution: z
-    .number()
-    .min(0, 'Monthly contribution cannot be negative'),
-  
-  initial_balance: z
-    .number()
-    .min(0, 'Initial balance cannot be negative'),
+  // Savings accounts - array of accounts with name, rate, contribution, initial_balance
+  savings_accounts: z
+    .array(z.object({
+      name: z.string().min(1, 'Account name is required').max(50, 'Account name too long'),
+      rate: z.number().min(0, 'Rate cannot be negative').max(15, 'Rate cannot exceed 15%'),
+      monthly_contribution: z.number().min(0, 'Contribution cannot be negative'),
+      initial_balance: z.number().min(0, 'Initial balance cannot be negative'),
+    }))
+    .min(0, 'At least one account can be added')
+    .max(10, 'Maximum 10 accounts allowed')
+    .default([{
+      name: 'Savings',
+      rate: 4.3,
+      monthly_contribution: 2500,
+      initial_balance: 170000
+    }]),
 
   // Simulation parameters
   typical_payment: z
@@ -127,6 +120,14 @@ export type CustomOverpayment = {
   amount: number
 }
 
+// Helper type for savings accounts
+export type SavingsAccountFormData = {
+  name: string
+  rate: number
+  monthly_contribution: number
+  initial_balance: number
+}
+
 export type MortgageFormData = z.infer<typeof mortgageFormSchema>
 
 // Get today's date in YYYY-MM-DD format
@@ -145,9 +146,12 @@ export const defaultFormValues: MortgageFormData = {
   fixed_term_months: 24,
   variable_rate: 6.0,
   deals: [{ start_month: 0, end_month: 24, rate: 1.65 }],
-  savings_rate: 4.3,
-  monthly_contribution: 2500,
-  initial_balance: 170000,
+  savings_accounts: [{
+    name: 'Savings',
+    rate: 4.3,
+    monthly_contribution: 2500,
+    initial_balance: 170000
+  }],
   typical_payment: 878,
   asset_value: 360000,
   show_years_after_payoff: 5,
@@ -232,7 +236,7 @@ export const getMonthName = (monthNumber: number): string => {
 
 // Local storage utilities with validation
 const STORAGE_KEY = 'mortgasim_form_data'
-const STORAGE_VERSION = '2.0.0' // Bumped for multi-deal support
+const STORAGE_VERSION = '3.0.0' // Updated for multi-deal + multi-account support
 
 interface StoredFormData {
   version: string

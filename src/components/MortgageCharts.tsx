@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import {
   Box,
   Card,
@@ -15,9 +15,10 @@ import type { ChartData, SummaryStatistics } from '../types/mortgage'
 
 // Import Chart.js setup (registers components)
 import '../utils/chartSetup'
+import { getAccountColor } from '../utils/chartSetup'
 
 // Import Chart.js components
-import { InteractiveBalanceChart, NetWorthChart, PaymentScheduleChart, LTVChart } from './charts'
+import { InteractiveBalanceChart, NetWorthChart, PaymentScheduleChart, LTVChart, PerAccountSavingsChart } from './charts'
 
 interface MortgageChartsProps {
   chartData: ChartData
@@ -48,6 +49,25 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value)
+  }
+
+  // State for selected accounts in per-account chart
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([])
+
+  // Initialize selected accounts when chart data changes
+  useEffect(() => {
+    if (chartData?.accounts && chartData.accounts.length > 0) {
+      setSelectedAccounts(chartData.accounts.map((acc) => acc.name))
+    }
+  }, [chartData?.accounts])
+
+  // Toggle account selection
+  const handleAccountToggle = (accountName: string) => {
+    setSelectedAccounts((prev) =>
+      prev.includes(accountName)
+        ? prev.filter((name) => name !== accountName)
+        : [...prev, accountName]
+    )
   }
 
   if (isLoading) {
@@ -314,6 +334,45 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
             </Box>
           )}
 
+          {/* Per-account summaries */}
+          {summaryStats.account_summaries && summaryStats.account_summaries.length > 1 && (
+            <Box sx={{ mt: 3 }}>
+              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                Account Breakdown
+              </Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: `repeat(${Math.min(summaryStats.account_summaries.length, 4)}, 1fr)` },
+                  gap: 2,
+                }}
+              >
+                {summaryStats.account_summaries.map((account, index) => (
+                  <Box
+                    key={account.name}
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      border: '1px solid',
+                      borderColor: getAccountColor(index),
+                      backgroundColor: `${getAccountColor(index)}08`,
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight="medium" sx={{ color: getAccountColor(index), mb: 0.5 }}>
+                      {account.name}
+                    </Typography>
+                    <Typography variant="body2">
+                      Balance: {formatCurrency(account.final_balance)}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Interest: {formatCurrency(account.total_interest_earned)}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+          )}
+
           {notes && notes.length > 0 && (
             <Box sx={{ mt: 2 }}>
               <Alert
@@ -377,6 +436,48 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
           </Box>
         </CardContent>
       </Card>
+
+      {/* Per-Account Savings Chart - only show when multiple accounts exist */}
+      {chartData.accounts && chartData.accounts.length > 1 && (
+        <Card elevation={3}>
+          <CardContent>
+            <Typography variant="h6" gutterBottom sx={{ mb: 1 }}>
+              Savings by Account
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+              {chartData.accounts.map((account, index) => (
+                <Chip
+                  key={account.name}
+                  label={account.name}
+                  onClick={() => handleAccountToggle(account.name)}
+                  variant={selectedAccounts.includes(account.name) ? 'filled' : 'outlined'}
+                  sx={{
+                    backgroundColor: selectedAccounts.includes(account.name)
+                      ? getAccountColor(index)
+                      : 'transparent',
+                    borderColor: getAccountColor(index),
+                    color: selectedAccounts.includes(account.name) ? 'white' : getAccountColor(index),
+                    '&:hover': {
+                      backgroundColor: selectedAccounts.includes(account.name)
+                        ? getAccountColor(index)
+                        : `${getAccountColor(index)}20`,
+                    },
+                  }}
+                />
+              ))}
+            </Box>
+            <Box sx={{ height: 350 }}>
+              <PerAccountSavingsChart
+                years={processedData.years}
+                accounts={chartData.accounts}
+                selectedAccounts={selectedAccounts}
+                startDate={startDate}
+                birthYear={birthYear}
+              />
+            </Box>
+          </CardContent>
+        </Card>
+      )}
 
       {/* LTV Chart */}
       <Card elevation={3}>

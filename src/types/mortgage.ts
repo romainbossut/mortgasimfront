@@ -15,7 +15,17 @@ export interface MortgageParameters {
   deals?: Deal[] // List of fixed-rate deal periods
 }
 
+// Individual savings/investment account
+export interface SavingsAccount {
+  name: string // Account name (e.g., 'ISA', 'SIPP')
+  rate: number // Annual interest rate as percentage
+  monthly_contribution: number // Monthly contribution in pounds
+  initial_balance: number // Initial balance in pounds
+}
+
 export interface SavingsParameters {
+  accounts?: SavingsAccount[] // List of savings/investment accounts
+  // Legacy single-account fields (deprecated, use accounts instead)
   rate?: number // Annual savings interest rate as percentage (default 4.3)
   monthly_contribution?: number // Monthly savings contribution in pounds (default 2500.0)
   initial_balance?: number // Initial savings balance in pounds (default 170000.0)
@@ -55,26 +65,44 @@ export interface MonthlyData {
   payment_difference: number
 }
 
+// Per-account chart data
+export interface AccountChartData {
+  name: string // Account name
+  balance: number[] // Account balance over time
+  interest_received: number[] // Interest received per month
+  contributions: number[] // Contributions per month
+}
+
 export interface ChartData {
   years: number[]
   mortgage_balance: number[]
-  savings_balance: number[]
+  savings_balance: number[] // Consolidated savings balance
   net_worth: number[]
   monthly_payments: number[]
   interest_paid: number[]
   principal_paid: number[]
-  monthly_savings_data: number[]
-  interest_received: number[]
+  monthly_savings_data: number[] // Consolidated monthly contributions
+  interest_received: number[] // Consolidated interest received
+  accounts: AccountChartData[] // Per-account chart data
+}
+
+// Per-account summary statistics
+export interface AccountSummary {
+  name: string // Account name
+  final_balance: number // Final balance for this account
+  total_contributions: number // Total contributions made
+  total_interest_earned: number // Total interest earned
 }
 
 export interface SummaryStatistics {
   final_mortgage_balance: number
-  final_savings_balance: number
+  final_savings_balance: number // Consolidated final savings
   final_net_worth: number
-  min_savings_balance: number
+  min_savings_balance: number // Consolidated minimum
   min_savings_month: number
   mortgage_paid_off_month?: number | null
   fixed_term_end_balance?: number | null
+  account_summaries: AccountSummary[] // Per-account summaries
 }
 
 export interface SimulationResponse {
