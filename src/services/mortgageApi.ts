@@ -112,14 +112,26 @@ export class MortgageApiService {
 
 // Helper function to transform form data to API request format
 export const transformFormDataToRequest = (formData: MortgageFormData): SimulationRequest => {
+  // Build deals array for API
+  const deals = formData.deals && formData.deals.length > 0
+    ? formData.deals.map(d => ({
+        start_month: d.start_month,
+        end_month: d.end_month,
+        rate: d.rate,
+      }))
+    : undefined
+
+  // Derive legacy fixed_rate/fixed_term_months from first deal for backward compat
+  const firstDeal = deals && deals.length > 0 ? deals[0] : null
+
   return {
     mortgage: {
       amount: formData.mortgage_amount,
       term_years: formData.term_years,
-      fixed_rate: formData.fixed_rate,
-      fixed_term_months: formData.fixed_term_months,
+      fixed_rate: firstDeal ? firstDeal.rate : formData.fixed_rate,
+      fixed_term_months: firstDeal ? firstDeal.end_month : formData.fixed_term_months,
       variable_rate: formData.variable_rate,
-      max_payment_after_fixed: formData.max_payment_after_fixed || null,
+      deals,
     },
     savings: {
       rate: formData.savings_rate,

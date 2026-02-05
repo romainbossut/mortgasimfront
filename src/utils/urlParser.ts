@@ -103,10 +103,10 @@ export function encodeFormDataToUrl(data: MortgageFormData): string {
   params.set('fixed_rate', data.fixed_rate.toString());
   params.set('fixed_term_months', data.fixed_term_months.toString());
   params.set('variable_rate', data.variable_rate.toString());
-  
-  // Optional max payment
-  if (data.max_payment_after_fixed) {
-    params.set('max_payment_after_fixed', data.max_payment_after_fixed.toString());
+
+  // Deals
+  if (data.deals && data.deals.length > 0) {
+    params.set('deals', JSON.stringify(data.deals));
   }
   
   // Savings parameters
@@ -182,7 +182,31 @@ export function decodeFormDataFromUrl(searchParams: URLSearchParams): Partial<Mo
   data.fixed_rate = parseNumber(searchParams.get('fixed_rate'), 0, 15);
   data.fixed_term_months = parseInteger(searchParams.get('fixed_term_months'), 0);
   data.variable_rate = parseNumber(searchParams.get('variable_rate'), 0, 15);
-  data.max_payment_after_fixed = parseNumber(searchParams.get('max_payment_after_fixed'), 0);
+
+  // Parse deals
+  const dealsStr = searchParams.get('deals');
+  if (dealsStr) {
+    try {
+      const parsed = JSON.parse(dealsStr);
+      if (Array.isArray(parsed)) {
+        data.deals = parsed.filter(
+          (d: Record<string, unknown>) =>
+            typeof d.start_month === 'number' &&
+            typeof d.end_month === 'number' &&
+            typeof d.rate === 'number' &&
+            d.end_month > d.start_month &&
+            d.start_month >= 0 &&
+            d.rate >= 0 &&
+            d.rate <= 15
+        );
+      }
+    } catch {
+      console.warn('Failed to parse deals from URL');
+    }
+  } else if (data.fixed_rate !== undefined && data.fixed_term_months !== undefined && data.fixed_term_months > 0) {
+    // Fallback: synthesize deals from legacy fixed_rate/fixed_term_months
+    data.deals = [{ start_month: 0, end_month: data.fixed_term_months, rate: data.fixed_rate }];
+  }
   
   data.savings_rate = parseNumber(searchParams.get('savings_rate'), 0, 15);
   data.monthly_contribution = parseNumber(searchParams.get('monthly_contribution'), 0);

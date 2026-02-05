@@ -28,6 +28,7 @@ import {
 } from '../utils/validation'
 import { generateShareableLink, copyToClipboard } from '../utils/urlParser'
 import type { MortgageFormData } from '../utils/validation'
+import { DealTimeline } from './DealTimeline'
 
 const STORAGE_KEY = 'mortgasim-form-values'
 
@@ -79,6 +80,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
     formState: { errors, isValid },
     watch,
     reset,
+    setValue,
   } = useForm<MortgageFormData>({
     resolver: zodResolver(mortgageFormSchema) as any,
     defaultValues: formValues,
@@ -251,7 +253,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                 Mortgage Details
               </Typography>
 
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5, mb: 2 }}>
                 <Controller
                   name="mortgage_amount"
                   control={control}
@@ -290,51 +292,13 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                 />
 
                 <Controller
-                  name="fixed_rate"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                      label="Fixed Rate (%)"
-                      type="number"
-                      error={!!errors.fixed_rate}
-                      helperText={errors.fixed_rate?.message}
-                      fullWidth
-                      placeholder="1.65"
-                      inputProps={{ min: 0, max: 15, step: 0.01 }}
-                      size="small"
-                    />
-                  )}
-                />
-
-                <Controller
-                  name="fixed_term_months"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                      label="Fixed Term (Mo)"
-                      type="number"
-                      error={!!errors.fixed_term_months}
-                      helperText={errors.fixed_term_months?.message}
-                      fullWidth
-                      placeholder="24"
-                      inputProps={{ min: 0 }}
-                      size="small"
-                    />
-                  )}
-                />
-
-                <Controller
                   name="variable_rate"
                   control={control}
                   render={({ field }) => (
                     <TextField
                       {...field}
                       onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                      label="Variable Rate (%)"
+                      label="SVR / Variable Rate (%)"
                       type="number"
                       error={!!errors.variable_rate}
                       helperText={errors.variable_rate?.message}
@@ -345,25 +309,35 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                     />
                   )}
                 />
-
-                <Controller
-                  name="max_payment_after_fixed"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
-                      label="Max Payment (£)"
-                      type="number"
-                      error={!!errors.max_payment_after_fixed}
-                      helperText={errors.max_payment_after_fixed?.message || 'Optional'}
-                      fullWidth
-                      placeholder="Optional"
-                      size="small"
-                    />
-                  )}
-                />
               </Box>
+
+              {/* Deal Timeline */}
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                Rate Deals — drag to resize/move, click to select
+              </Typography>
+              <Controller
+                name="deals"
+                control={control}
+                render={({ field }) => (
+                  <DealTimeline
+                    deals={field.value || []}
+                    onChange={(newDeals) => {
+                      field.onChange(newDeals)
+                      // Sync legacy fields from first deal for backward compat
+                      if (newDeals.length > 0) {
+                        const first = newDeals[0]
+                        setValue('fixed_rate', first.rate)
+                        setValue('fixed_term_months', first.end_month)
+                      } else {
+                        setValue('fixed_rate', 0)
+                        setValue('fixed_term_months', 0)
+                      }
+                    }}
+                    termYears={currentValues.term_years || 25}
+                    variableRate={currentValues.variable_rate || 6.0}
+                  />
+                )}
+              />
             </Paper>
 
             {/* Savings Parameters */}

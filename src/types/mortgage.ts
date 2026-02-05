@@ -1,12 +1,18 @@
 // Types based on the OpenAPI specification for Mortgage Simulation API
 
+export interface Deal {
+  start_month: number // 0-based, inclusive
+  end_month: number // 0-based, exclusive
+  rate: number // annual rate %
+}
+
 export interface MortgageParameters {
   amount: number // Initial mortgage amount in pounds
   term_years: number // Mortgage term in years (max 40)
-  fixed_rate: number // Fixed interest rate as percentage (0-15)
-  fixed_term_months: number // Fixed rate term in months
-  variable_rate?: number // Variable rate after fixed term (default 6.0)
-  max_payment_after_fixed?: number | null // Maximum monthly payment after fixed period
+  fixed_rate: number // Fixed interest rate as percentage (legacy, use deals)
+  fixed_term_months: number // Fixed rate term in months (legacy, use deals)
+  variable_rate?: number // Variable rate / SVR after fixed term (default 6.0)
+  deals?: Deal[] // List of fixed-rate deal periods
 }
 
 export interface SavingsParameters {
