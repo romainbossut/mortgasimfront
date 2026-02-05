@@ -285,85 +285,95 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
             const isSelected = selectedDeal === index
             const color = getDealColor(index)
             const duration = deal.end_month - deal.start_month
+            const isNarrow = width < 8
 
             return (
-              <Box
+              <Tooltip
                 key={index}
-                sx={{
-                  position: 'absolute',
-                  left: `${left}%`,
-                  width: `${width}%`,
-                  top: 4,
-                  bottom: 4,
-                  backgroundColor: color,
-                  opacity: isSelected ? 1 : 0.85,
-                  borderRadius: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: dragState?.dealIndex === index ? 'grabbing' : 'grab',
-                  boxShadow: isSelected ? `0 0 0 2px ${color}, 0 2px 8px rgba(0,0,0,0.2)` : '0 1px 3px rgba(0,0,0,0.15)',
-                  transition: dragState ? 'none' : 'box-shadow 0.15s, opacity 0.15s',
-                  '&:hover': {
-                    opacity: 1,
-                  },
-                  zIndex: isSelected ? 2 : 1,
-                  minWidth: 30,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelectedDeal(index)
-                }}
-                onMouseDown={(e) => handleMouseDown(e, index, 'move')}
+                title={`${deal.rate}% · ${duration}mo`}
+                arrow
+                placement="top"
               >
-                {/* Resize handle - start */}
                 <Box
                   sx={{
                     position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: 8,
-                    cursor: 'ew-resize',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                    borderRadius: '4px 0 0 4px',
-                  }}
-                  onMouseDown={(e) => handleMouseDown(e, index, 'resize-start')}
-                />
-
-                {/* Content */}
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: 'white',
-                    fontWeight: 700,
-                    fontSize: width > 8 ? '0.75rem' : '0.6rem',
-                    textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-                    pointerEvents: 'none',
-                    whiteSpace: 'nowrap',
+                    left: `${left}%`,
+                    width: `${width}%`,
+                    minWidth: 4,
+                    top: 4,
+                    bottom: 4,
+                    backgroundColor: color,
+                    opacity: isSelected ? 1 : 0.85,
+                    borderRadius: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: dragState?.dealIndex === index ? 'grabbing' : 'grab',
+                    boxShadow: isSelected ? `0 0 0 2px ${color}, 0 2px 8px rgba(0,0,0,0.2)` : '0 1px 3px rgba(0,0,0,0.15)',
+                    transition: dragState ? 'none' : 'box-shadow 0.15s, opacity 0.15s',
+                    '&:hover': {
+                      opacity: 1,
+                    },
+                    zIndex: isSelected ? 2 : 1,
                     overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    px: 1,
                   }}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedDeal(index)
+                  }}
+                  onMouseDown={(e) => handleMouseDown(e, index, 'move')}
                 >
-                  {deal.rate}%{width > 12 ? ` · ${duration}mo` : ''}
-                </Typography>
+                  {/* Resize handle - start */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 8,
+                      cursor: 'ew-resize',
+                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                      borderRadius: '4px 0 0 4px',
+                    }}
+                    onMouseDown={(e) => handleMouseDown(e, index, 'resize-start')}
+                  />
 
-                {/* Resize handle - end */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    right: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: 8,
-                    cursor: 'ew-resize',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
-                    borderRadius: '0 4px 4px 0',
-                  }}
-                  onMouseDown={(e) => handleMouseDown(e, index, 'resize-end')}
-                />
-              </Box>
+                  {/* Content — hidden when box is too narrow */}
+                  {!isNarrow && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'white',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        textShadow: '0 1px 2px rgba(0,0,0,0.3)',
+                        pointerEvents: 'none',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        px: 1,
+                      }}
+                    >
+                      {deal.rate}%{width > 12 ? ` · ${duration}mo` : ''}
+                    </Typography>
+                  )}
+
+                  {/* Resize handle - end */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      right: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 8,
+                      cursor: 'ew-resize',
+                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                      borderRadius: '0 4px 4px 0',
+                    }}
+                    onMouseDown={(e) => handleMouseDown(e, index, 'resize-end')}
+                  />
+                </Box>
+              </Tooltip>
             )
           })}
         </Box>
