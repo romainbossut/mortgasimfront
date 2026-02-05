@@ -34,6 +34,54 @@ import { generateShareableLink, copyToClipboard } from '../utils/urlParser'
 import type { MortgageFormData } from '../utils/validation'
 import { DealTimeline } from './DealTimeline'
 
+// Numeric text field — standard text input constrained to digits and dots.
+// Avoids number input quirks (spinner arrows, scroll-to-change, selection issues).
+const NumericField: React.FC<
+  Omit<React.ComponentProps<typeof TextField>, 'type' | 'value' | 'onChange'> & {
+    value: number | undefined | ''
+    onChange: (value: number | '') => void
+  }
+> = ({ value, onChange, ...rest }) => {
+  const [local, setLocal] = React.useState(() =>
+    value != null && value !== '' ? String(value) : ''
+  )
+
+  const prev = React.useRef(value)
+  React.useEffect(() => {
+    if (value !== prev.current) {
+      prev.current = value
+      setLocal(value != null && value !== '' ? String(value) : '')
+    }
+  }, [value])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let raw = e.target.value.replace(/[^0-9.]/g, '')
+    // Allow at most one dot
+    const dotIdx = raw.indexOf('.')
+    if (dotIdx !== -1) {
+      raw = raw.slice(0, dotIdx + 1) + raw.slice(dotIdx + 1).replace(/\./g, '')
+    }
+    setLocal(raw)
+
+    if (raw === '' || raw === '.') {
+      onChange('')
+    } else {
+      const num = Number(raw)
+      if (!isNaN(num)) onChange(num)
+    }
+  }
+
+  return (
+    <TextField
+      {...rest}
+      type="text"
+      inputMode="decimal"
+      value={local}
+      onChange={handleChange}
+    />
+  )
+}
+
 const STORAGE_KEY = 'mortgasim-form-values'
 
 interface MortgageFormProps {
@@ -247,17 +295,14 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   name="birth_year"
                   control={control}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                    <NumericField
                       value={field.value ?? ''}
+                      onChange={(v) => field.onChange(v)}
                       label="Birth Year"
-                      type="number"
                       error={!!errors.birth_year}
                       helperText={errors.birth_year?.message || 'For age on charts'}
                       fullWidth
                       placeholder="1985"
-                      inputProps={{ min: 1900, max: 2020 }}
                       size="small"
                     />
                   )}
@@ -277,11 +322,10 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   name="mortgage_amount"
                   control={control}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                    <NumericField
+                      value={field.value}
+                      onChange={(v) => field.onChange(v)}
                       label="Amount (£)"
-                      type="number"
                       error={!!errors.mortgage_amount}
                       helperText={errors.mortgage_amount?.message}
                       fullWidth
@@ -295,16 +339,14 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   name="term_years"
                   control={control}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                    <NumericField
+                      value={field.value}
+                      onChange={(v) => field.onChange(v)}
                       label="Term (Years)"
-                      type="number"
                       error={!!errors.term_years}
                       helperText={errors.term_years?.message}
                       fullWidth
                       placeholder="25"
-                      inputProps={{ min: 1, max: 40 }}
                       size="small"
                     />
                   )}
@@ -314,16 +356,14 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   name="variable_rate"
                   control={control}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                    <NumericField
+                      value={field.value}
+                      onChange={(v) => field.onChange(v)}
                       label="SVR / Variable Rate (%)"
-                      type="number"
                       error={!!errors.variable_rate}
                       helperText={errors.variable_rate?.message}
                       fullWidth
                       placeholder="6.0"
-                      inputProps={{ min: 0, max: 15, step: 0.01 }}
                       size="small"
                     />
                   )}
@@ -426,16 +466,14 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                         name={`savings_accounts.${index}.initial_balance`}
                         control={control}
                         render={({ field: inputField }) => (
-                          <TextField
-                            {...inputField}
-                            onChange={(e) => inputField.onChange(e.target.value ? Number(e.target.value) : '')}
+                          <NumericField
+                            value={inputField.value}
+                            onChange={(v) => inputField.onChange(v)}
                             label="Initial (£)"
-                            type="number"
                             error={!!errors.savings_accounts?.[index]?.initial_balance}
                             helperText={errors.savings_accounts?.[index]?.initial_balance?.message}
                             fullWidth
                             placeholder="50000"
-                            inputProps={{ min: 0 }}
                             size="small"
                           />
                         )}
@@ -445,16 +483,14 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                         name={`savings_accounts.${index}.monthly_contribution`}
                         control={control}
                         render={({ field: inputField }) => (
-                          <TextField
-                            {...inputField}
-                            onChange={(e) => inputField.onChange(e.target.value ? Number(e.target.value) : '')}
+                          <NumericField
+                            value={inputField.value}
+                            onChange={(v) => inputField.onChange(v)}
                             label="Monthly (£)"
-                            type="number"
                             error={!!errors.savings_accounts?.[index]?.monthly_contribution}
                             helperText={errors.savings_accounts?.[index]?.monthly_contribution?.message}
                             fullWidth
                             placeholder="500"
-                            inputProps={{ min: 0 }}
                             size="small"
                           />
                         )}
@@ -464,16 +500,14 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                         name={`savings_accounts.${index}.rate`}
                         control={control}
                         render={({ field: inputField }) => (
-                          <TextField
-                            {...inputField}
-                            onChange={(e) => inputField.onChange(e.target.value ? Number(e.target.value) : '')}
+                          <NumericField
+                            value={inputField.value}
+                            onChange={(v) => inputField.onChange(v)}
                             label="Rate (%)"
-                            type="number"
                             error={!!errors.savings_accounts?.[index]?.rate}
                             helperText={errors.savings_accounts?.[index]?.rate?.message}
                             fullWidth
                             placeholder="4.0"
-                            inputProps={{ min: 0, max: 15, step: 0.01 }}
                             size="small"
                           />
                         )}
@@ -510,16 +544,14 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   name="typical_payment"
                   control={control}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                    <NumericField
+                      value={field.value}
+                      onChange={(v) => field.onChange(v)}
                       label="Monthly Payment (£)"
-                      type="number"
                       error={!!errors.typical_payment}
                       helperText={errors.typical_payment?.message}
                       fullWidth
                       placeholder="878"
-                      inputProps={{ min: 0 }}
                       size="small"
                     />
                   )}
@@ -529,16 +561,14 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   name="asset_value"
                   control={control}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                    <NumericField
+                      value={field.value}
+                      onChange={(v) => field.onChange(v)}
                       label="Property Value (£)"
-                      type="number"
                       error={!!errors.asset_value}
                       helperText={errors.asset_value?.message}
                       fullWidth
                       placeholder="360000"
-                      inputProps={{ min: 0 }}
                       size="small"
                     />
                   )}
@@ -548,16 +578,14 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                   name="show_years_after_payoff"
                   control={control}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      onChange={(e) => field.onChange(e.target.value ? Number(e.target.value) : '')}
+                    <NumericField
+                      value={field.value}
+                      onChange={(v) => field.onChange(v)}
                       label="Years After Payoff"
-                      type="number"
                       error={!!errors.show_years_after_payoff}
                       helperText={errors.show_years_after_payoff?.message}
                       fullWidth
                       placeholder="5"
-                      inputProps={{ min: 0, max: 20 }}
                       size="small"
                     />
                   )}

@@ -27,11 +27,8 @@ function App() {
         <Routes>
           {/* Default home page */}
           <Route path="/" element={<MortgageSimulation />} />
-          
-          {/* Dynamic mortgage pages with URL slugs */}
-          <Route path="/mortgage/:slug" element={<DynamicMortgagePage />} />
-          
-          {/* Query parameter fallback */}
+
+          {/* Shared simulation link: /mortgage?d=<base64> */}
           <Route path="/mortgage" element={<DynamicMortgagePage />} />
         </Routes>
       </Suspense>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { track } from '@vercel/analytics'
 import {
@@ -23,7 +23,7 @@ import { MortgageForm } from '../components/MortgageForm'
 import { MortgageCharts } from '../components/MortgageCharts'
 import { Footer } from '../components/Footer'
 import { MortgageApiService, transformFormDataToRequest } from '../services/mortgageApi'
-import { parseMortgageSlug, parseMortgageQuery, decodeFormDataFromUrl, generateShareableLink, copyToClipboard } from '../utils/urlParser'
+import { decodeFormDataFromUrl, generateShareableLink, copyToClipboard } from '../utils/urlParser'
 import { defaultFormValues } from '../utils/validation'
 import type { MortgageFormData } from '../utils/validation'
 import type { SimulationResponse, SimulationRequest } from '../types/mortgage'
@@ -40,7 +40,6 @@ const getErrorMessage = (error: unknown): string => {
 }
 
 export const DynamicMortgagePage: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>()
   const [searchParams] = useSearchParams()
   const [simulationResults, setSimulationResults] = useState<SimulationResponse | null>(null)
   const [warnings, setWarnings] = useState<string[]>([])
@@ -54,39 +53,10 @@ export const DynamicMortgagePage: React.FC = () => {
     severity: 'success'
   })
 
-  // Parse URL parameters - first try comprehensive URL decoding, fallback to legacy parsing
+  // Parse URL parameters from base64-encoded `d` param
   const urlParams = useMemo(() => {
-    // Try comprehensive URL parameter decoding first
-    const comprehensiveParams = decodeFormDataFromUrl(searchParams)
-    if (Object.keys(comprehensiveParams).length > 0) {
-      return comprehensiveParams
-    }
-    
-    // Fallback to legacy parsing for backwards compatibility
-    if (slug) {
-      const legacyParams = parseMortgageSlug(slug)
-      if (legacyParams) {
-        return {
-          mortgage_amount: legacyParams.loan,
-          term_years: legacyParams.term,
-          fixed_rate: legacyParams.rate,
-          variable_rate: legacyParams.rate,
-        }
-      }
-    } else {
-      const legacyParams = parseMortgageQuery(searchParams)
-      if (Object.keys(legacyParams).length > 0) {
-        return {
-          mortgage_amount: legacyParams.loan,
-          term_years: legacyParams.term,
-          fixed_rate: legacyParams.rate,
-          variable_rate: legacyParams.rate,
-        }
-      }
-    }
-    
-    return {}
-  }, [slug, searchParams])
+    return decodeFormDataFromUrl(searchParams)
+  }, [searchParams])
 
   // Track page visits for dynamic mortgage pages
   useEffect(() => {
@@ -95,12 +65,10 @@ export const DynamicMortgagePage: React.FC = () => {
         loan_amount: urlParams.mortgage_amount?.toString() || 'unknown',
         term_years: urlParams.term_years?.toString() || 'unknown',
         interest_rate: urlParams.fixed_rate?.toString() || 'unknown',
-        url_format: slug ? 'slug' : 'query',
         page_url: window.location.pathname,
-        is_comprehensive_params: Object.keys(urlParams).length > 3,
       })
     }
-  }, [urlParams, slug])
+  }, [urlParams])
 
   // Check if we have actual URL parameters (not empty object)
   const hasUrlParams = urlParams && Object.keys(urlParams).length > 0
