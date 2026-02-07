@@ -7,6 +7,7 @@ import {
   CircularProgress,
   Chip,
   Alert,
+  Slider,
 } from '@mui/material'
 import { DataGrid } from '@mui/x-data-grid'
 import type { GridColDef } from '@mui/x-data-grid'
@@ -15,7 +16,7 @@ import type { ChartData, SummaryStatistics } from '../types/mortgage'
 
 // Import Chart.js setup (registers components)
 import '../utils/chartSetup'
-import { getAccountColor } from '../utils/chartSetup'
+import { getAccountColor, yearsToDate, formatDateLabel } from '../utils/chartSetup'
 
 // Import Chart.js components
 import { InteractiveBalanceChart, NetWorthChart, PaymentScheduleChart, LTVChart, PerAccountSavingsChart } from './charts'
@@ -60,6 +61,77 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
       setSelectedAccounts(chartData.accounts.map((acc) => acc.name))
     }
   }, [chartData?.accounts])
+
+  // Timeline slider state: null means end of timeline (default)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+
+  // Reset slider when chart data changes (new simulation)
+  useEffect(() => {
+    setSelectedIndex(null)
+  }, [chartData])
+
+  // Compute stats at the selected slider position
+  const sliderStats = useMemo(() => {
+    if (!chartData || chartData.years.length === 0) {
+      return null
+    }
+
+    const lastIndex = chartData.years.length - 1
+    const idx = selectedIndex ?? lastIndex
+    const isEndOfTimeline = idx === lastIndex
+
+    const netWorth = chartData.net_worth[idx]
+    const savingsBalance = chartData.savings_balance[idx]
+    const mortgageBalance = chartData.mortgage_balance[idx]
+
+    // Min savings balance up to selected index
+    let minSavingsBalance = chartData.savings_balance[0]
+    for (let i = 1; i <= idx; i++) {
+      if (chartData.savings_balance[i] < minSavingsBalance) {
+        minSavingsBalance = chartData.savings_balance[i]
+      }
+    }
+
+    // Date and age labels
+    const date = yearsToDate(chartData.years[idx], startDate)
+    const dateLabel = formatDateLabel(date)
+    const ageLabel = birthYear ? `Age ${date.getFullYear() - birthYear}` : undefined
+
+    // Per-account stats at selected index
+    const accountStats = chartData.accounts?.map((account, accountIndex) => {
+      let cumulativeInterest = 0
+      let cumulativeContributions = 0
+      for (let i = 0; i <= idx; i++) {
+        cumulativeInterest += account.interest_received[i]
+        cumulativeContributions += account.contributions[i]
+      }
+      return {
+        name: account.name,
+        balance: account.balance[idx],
+        totalInterest: cumulativeInterest,
+        totalContributions: cumulativeContributions,
+        colorIndex: accountIndex,
+      }
+    }) ?? []
+
+    // Mortgage payoff status relative to selected position
+    const mortgagePaidOffMonth = summaryStats.mortgage_paid_off_month
+    const monthAtIdx = Math.round(chartData.years[idx] * 12)
+    const isMortgagePaidOff = mortgagePaidOffMonth != null && monthAtIdx >= mortgagePaidOffMonth
+
+    return {
+      netWorth,
+      savingsBalance,
+      mortgageBalance,
+      minSavingsBalance,
+      dateLabel,
+      ageLabel,
+      isEndOfTimeline,
+      accountStats,
+      isMortgagePaidOff,
+      mortgagePaidOffMonth,
+    }
+  }, [chartData, selectedIndex, startDate, birthYear, summaryStats.mortgage_paid_off_month])
 
   // Toggle account selection
   const handleAccountToggle = (accountName: string) => {
@@ -279,98 +351,145 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
           <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
             Summary Statistics
           </Typography>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
-              gap: 2,
-            }}
-          >
-            <Box sx={{ textAlign: 'center', p: 1 }}>
-              <Typography variant="h4" color="primary.main" fontWeight="bold">
-                {formatCurrency(summaryStats.final_net_worth)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Final Net Worth
-              </Typography>
-            </Box>
 
-            <Box sx={{ textAlign: 'center', p: 1 }}>
-              <Typography variant="h4" color="success.main" fontWeight="bold">
-                {formatCurrency(summaryStats.final_savings_balance)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Final Savings Balance
-              </Typography>
-            </Box>
-
-            <Box sx={{ textAlign: 'center', p: 1 }}>
-              <Typography variant="h4" color="info.main" fontWeight="bold">
-                {formatCurrency(summaryStats.final_mortgage_balance)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Final Mortgage Balance
-              </Typography>
-            </Box>
-
-            <Box sx={{ textAlign: 'center', p: 1 }}>
-              <Typography variant="h4" color="secondary.main" fontWeight="bold">
-                {formatCurrency(summaryStats.min_savings_balance)}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Minimum Savings
-              </Typography>
-            </Box>
-          </Box>
-
-          {summaryStats.mortgage_paid_off_month && (
-            <Box sx={{ mt: 2, textAlign: 'center' }}>
-              <Chip
-                label={`Mortgage paid off in month ${summaryStats.mortgage_paid_off_month}`}
-                color="success"
-                variant="outlined"
-                sx={{ fontSize: '0.875rem' }}
+          {/* Timeline Slider */}
+          {sliderStats && chartData.years.length > 1 && (
+            <Box sx={{ mb: 2, px: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Timeline Position
+                </Typography>
+                <Typography variant="body2" fontWeight="medium">
+                  {sliderStats.dateLabel}
+                  {sliderStats.ageLabel && ` (${sliderStats.ageLabel})`}
+                </Typography>
+              </Box>
+              <Slider
+                value={selectedIndex ?? chartData.years.length - 1}
+                min={0}
+                max={chartData.years.length - 1}
+                step={1}
+                onChange={(_e, value) => {
+                  const v = value as number
+                  setSelectedIndex(v === chartData.years.length - 1 ? null : v)
+                }}
+                valueLabelDisplay="auto"
+                valueLabelFormat={(value: number) => {
+                  const date = yearsToDate(chartData.years[value], startDate)
+                  return formatDateLabel(date)
+                }}
+                size="small"
               />
             </Box>
           )}
 
-          {/* Per-account summaries */}
-          {summaryStats.account_summaries && summaryStats.account_summaries.length > 1 && (
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
-                Account Breakdown
-              </Typography>
+          {sliderStats && (
+            <>
               <Box
                 sx={{
                   display: 'grid',
-                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: `repeat(${Math.min(summaryStats.account_summaries.length, 4)}, 1fr)` },
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
                   gap: 2,
                 }}
               >
-                {summaryStats.account_summaries.map((account, index) => (
+                <Box sx={{ textAlign: 'center', p: 1 }}>
+                  <Typography variant="h4" color="primary.main" fontWeight="bold">
+                    {formatCurrency(sliderStats.netWorth)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {sliderStats.isEndOfTimeline ? 'Final Net Worth' : 'Net Worth'}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ textAlign: 'center', p: 1 }}>
+                  <Typography variant="h4" color="success.main" fontWeight="bold">
+                    {formatCurrency(sliderStats.savingsBalance)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {sliderStats.isEndOfTimeline ? 'Final Savings Balance' : 'Savings Balance'}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ textAlign: 'center', p: 1 }}>
+                  <Typography variant="h4" color="info.main" fontWeight="bold">
+                    {formatCurrency(sliderStats.mortgageBalance)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {sliderStats.isEndOfTimeline ? 'Final Mortgage Balance' : 'Mortgage Balance'}
+                  </Typography>
+                </Box>
+
+                <Box sx={{ textAlign: 'center', p: 1 }}>
+                  <Typography variant="h4" color="secondary.main" fontWeight="bold">
+                    {formatCurrency(sliderStats.minSavingsBalance)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {sliderStats.isEndOfTimeline ? 'Minimum Savings' : 'Min Savings (to date)'}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Mortgage payoff chip */}
+              {sliderStats.isMortgagePaidOff && (
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                  <Chip
+                    label="Mortgage paid off"
+                    color="success"
+                    variant="outlined"
+                    sx={{ fontSize: '0.875rem' }}
+                  />
+                </Box>
+              )}
+              {!sliderStats.isMortgagePaidOff && sliderStats.mortgagePaidOffMonth != null && (
+                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                  <Chip
+                    label={`Mortgage paid off in month ${sliderStats.mortgagePaidOffMonth}`}
+                    color="info"
+                    variant="outlined"
+                    sx={{ fontSize: '0.875rem' }}
+                  />
+                </Box>
+              )}
+
+              {/* Per-account breakdown */}
+              {sliderStats.accountStats.length > 1 && (
+                <Box sx={{ mt: 3 }}>
+                  <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 600 }}>
+                    Account Breakdown
+                  </Typography>
                   <Box
-                    key={account.name}
                     sx={{
-                      p: 1.5,
-                      borderRadius: 1,
-                      border: '1px solid',
-                      borderColor: getAccountColor(index),
-                      backgroundColor: `${getAccountColor(index)}08`,
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: `repeat(${Math.min(sliderStats.accountStats.length, 4)}, 1fr)` },
+                      gap: 2,
                     }}
                   >
-                    <Typography variant="body2" fontWeight="medium" sx={{ color: getAccountColor(index), mb: 0.5 }}>
-                      {account.name}
-                    </Typography>
-                    <Typography variant="body2">
-                      Balance: {formatCurrency(account.final_balance)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Interest: {formatCurrency(account.total_interest_earned)}
-                    </Typography>
+                    {sliderStats.accountStats.map((account) => (
+                      <Box
+                        key={account.name}
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: getAccountColor(account.colorIndex),
+                          backgroundColor: `${getAccountColor(account.colorIndex)}08`,
+                        }}
+                      >
+                        <Typography variant="body2" fontWeight="medium" sx={{ color: getAccountColor(account.colorIndex), mb: 0.5 }}>
+                          {account.name}
+                        </Typography>
+                        <Typography variant="body2">
+                          Balance: {formatCurrency(account.balance)}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          Interest: {formatCurrency(account.totalInterest)}
+                        </Typography>
+                      </Box>
+                    ))}
                   </Box>
-                ))}
-              </Box>
-            </Box>
+                </Box>
+              )}
+            </>
           )}
 
           {notes && notes.length > 0 && (
