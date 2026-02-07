@@ -98,8 +98,41 @@ export const theme = createTheme({
           borderRadius: 8,
           fontWeight: 600,
           boxShadow: 'none',
+          minHeight: 44,
           '&:hover': {
             boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          },
+          '&:active': {
+            transform: 'scale(0.97)',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.15)',
+          },
+        },
+        sizeSmall: {
+          minHeight: 40,
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          minWidth: 44,
+          minHeight: 44,
+          '&:active': {
+            transform: 'scale(0.92)',
+          },
+        },
+        sizeSmall: {
+          minWidth: 40,
+          minHeight: 40,
+        },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          height: 40,
+          '&:active': {
+            transform: 'scale(0.96)',
           },
         },
       },
@@ -142,6 +175,13 @@ export const theme = createTheme({
           '& .MuiInputLabel-root': {
             fontWeight: 500,
           },
+        },
+      },
+    },
+    MuiOutlinedInput: {
+      styleOverrides: {
+        sizeSmall: {
+          minHeight: 40,
         },
       },
     },

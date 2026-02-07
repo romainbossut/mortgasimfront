@@ -3,13 +3,13 @@ import {
   Popover,
   Box,
   Typography,
-  TextField,
   Button,
   IconButton,
   InputAdornment,
   Stack,
 } from '@mui/material'
 import { Delete as DeleteIcon, Close as CloseIcon } from '@mui/icons-material'
+import NumericField from '../NumericField'
 import type { ChartOverpayment } from '../../store/overpaymentStore'
 
 interface OverpaymentPopoverProps {
@@ -43,22 +43,20 @@ export const OverpaymentPopover: React.FC<OverpaymentPopoverProps> = ({
   }, [overpayment?.id, overpayment?.amount])
 
   const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value
-      setInputValue(value)
+    (value: number | '') => {
+      setInputValue(value === '' ? '' : String(value))
 
       // Validate and update
-      const numValue = parseFloat(value)
-      if (value === '' || isNaN(numValue)) {
+      if (value === '') {
         setError(null)
         onAmountChange(0)
-      } else if (numValue < 0) {
+      } else if (value < 0) {
         setError('Amount must be positive')
-      } else if (numValue > 10000000) {
+      } else if (value > 10000000) {
         setError('Amount too large')
       } else {
         setError(null)
-        onAmountChange(numValue)
+        onAmountChange(value)
       }
     },
     [onAmountChange]
@@ -129,11 +127,10 @@ export const OverpaymentPopover: React.FC<OverpaymentPopoverProps> = ({
           </Typography>
 
           {/* Amount input */}
-          <TextField
+          <NumericField
             fullWidth
             label="Amount"
-            type="number"
-            value={inputValue}
+            value={inputValue === '' ? '' : Number(inputValue)}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             error={Boolean(error)}
@@ -142,10 +139,6 @@ export const OverpaymentPopover: React.FC<OverpaymentPopoverProps> = ({
             slotProps={{
               input: {
                 startAdornment: <InputAdornment position="start">£</InputAdornment>,
-              },
-              htmlInput: {
-                min: 0,
-                step: 100,
               },
             }}
             sx={{ mb: 2 }}
@@ -159,19 +152,17 @@ export const OverpaymentPopover: React.FC<OverpaymentPopoverProps> = ({
                 color="error"
                 startIcon={<DeleteIcon />}
                 onClick={onDelete}
-                size="small"
               >
                 Delete
               </Button>
             )}
-            <Button variant="text" onClick={onClose} size="small">
+            <Button variant="text" onClick={onClose}>
               Cancel
             </Button>
             <Button
               variant="contained"
               onClick={handleConfirm}
               disabled={Boolean(error) || !inputValue}
-              size="small"
             >
               {isNew ? 'Add' : 'Update'}
             </Button>

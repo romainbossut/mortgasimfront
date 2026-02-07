@@ -15,6 +15,11 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
+/* Suppress default tap flash on touch devices */
+button, [role="button"], a, input, .MuiChip-root, .MuiIconButton-root {
+  -webkit-tap-highlight-color: transparent;
+}
+
 /* Custom global styles for the app */
 #root {
   min-height: 100vh;

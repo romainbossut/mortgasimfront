@@ -26,7 +26,7 @@ interface InteractiveBalanceChartProps {
 }
 
 // Threshold in pixels for detecting click on annotation line
-const LINE_HIT_THRESHOLD = 10
+const LINE_HIT_THRESHOLD = 20
 
 export const InteractiveBalanceChart: React.FC<InteractiveBalanceChartProps> = ({
   years,
@@ -507,7 +507,7 @@ export const InteractiveBalanceChart: React.FC<InteractiveBalanceChartProps> = (
   }, [chartOverpayments, editingId, startDate, pendingOverpayment, isNewOverpayment, startingAge, years])
 
   return (
-    <Box ref={containerRef} sx={{ position: 'relative', width: '100%', height: '100%' }}>
+    <Box ref={containerRef} sx={{ position: 'relative', width: '100%', height: '100%', touchAction: 'pan-y', WebkitTapHighlightColor: 'transparent' }}>
       {/* Instruction hint */}
       <Typography
         variant="caption"

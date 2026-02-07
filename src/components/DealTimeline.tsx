@@ -231,7 +231,7 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
           ref={timelineRef}
           sx={{
             position: 'relative',
-            height: 56,
+            height: 64,
             backgroundColor: 'grey.100',
             borderRadius: 1,
             border: '1px solid',
@@ -239,6 +239,8 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
             overflow: 'hidden',
             cursor: dragState ? 'grabbing' : 'default',
             userSelect: 'none',
+            touchAction: 'none',
+            WebkitTapHighlightColor: 'transparent',
           }}
           onClick={() => {
             if (!dragState) setSelectedDeal(null)
@@ -330,9 +332,12 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
                       left: 0,
                       top: 0,
                       bottom: 0,
-                      width: 8,
+                      width: 20,
                       cursor: 'ew-resize',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                      backgroundColor: 'rgba(255,255,255,0.15)',
+                      borderRight: '2px solid rgba(255,255,255,0.4)',
+                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.35)' },
+                      '&:active': { backgroundColor: 'rgba(255,255,255,0.5)' },
                       borderRadius: '4px 0 0 4px',
                     }}
                     onMouseDown={(e) => handleMouseDown(e, index, 'resize-start')}
@@ -365,9 +370,12 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
                       right: 0,
                       top: 0,
                       bottom: 0,
-                      width: 8,
+                      width: 20,
                       cursor: 'ew-resize',
-                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.3)' },
+                      backgroundColor: 'rgba(255,255,255,0.15)',
+                      borderLeft: '2px solid rgba(255,255,255,0.4)',
+                      '&:hover': { backgroundColor: 'rgba(255,255,255,0.35)' },
+                      '&:active': { backgroundColor: 'rgba(255,255,255,0.5)' },
                       borderRadius: '0 4px 4px 0',
                     }}
                     onMouseDown={(e) => handleMouseDown(e, index, 'resize-end')}
@@ -405,7 +413,7 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
           <Box
             sx={{
               display: 'grid',
-              gridTemplateColumns: '24px 1fr 80px 80px 60px 32px',
+              gridTemplateColumns: '24px 1fr 80px 80px 60px 44px',
               gap: 1,
               alignItems: 'center',
               px: 0.5,
@@ -428,14 +436,15 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
               key={index}
               sx={{
                 display: 'grid',
-                gridTemplateColumns: '24px 1fr 80px 80px 60px 32px',
+                gridTemplateColumns: '24px 1fr 80px 80px 60px 44px',
                 gap: 1,
                 alignItems: 'center',
                 px: 0.5,
-                py: 0.25,
+                py: 0.75,
                 borderRadius: 0.5,
                 backgroundColor: isSelected ? 'action.selected' : 'transparent',
                 '&:hover': { backgroundColor: isSelected ? 'action.selected' : 'action.hover' },
+                '&:active': { backgroundColor: 'action.selected' },
                 cursor: 'pointer',
               }}
               onClick={() => setSelectedDeal(index)}
@@ -455,7 +464,6 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
                   if (v !== '') handleListFieldChange(index, 'rate', v)
                 }}
                 size="small"
-                sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' } }}
                 onClick={(e) => e.stopPropagation()}
               />
               <NumericField
@@ -465,7 +473,6 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
                 }}
                 integer
                 size="small"
-                sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' } }}
                 onClick={(e) => e.stopPropagation()}
               />
               <NumericField
@@ -475,7 +482,6 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
                 }}
                 integer
                 size="small"
-                sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' } }}
                 onClick={(e) => e.stopPropagation()}
               />
               <Typography variant="body2" sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
@@ -487,7 +493,6 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
                   e.stopPropagation()
                   handleDeleteDeal(index)
                 }}
-                sx={{ p: 0.25 }}
               >
                 <Delete fontSize="small" />
               </IconButton>
