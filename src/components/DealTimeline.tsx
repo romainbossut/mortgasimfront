@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from 'react'
 import {
   Box,
   Typography,
-  TextField,
   IconButton,
   Button,
   Tooltip,
@@ -11,6 +10,7 @@ import {
   DialogContent,
   DialogActions,
 } from '@mui/material'
+import NumericField from './NumericField'
 import {
   Add,
   Delete,
@@ -449,39 +449,32 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
                   flexShrink: 0,
                 }}
               />
-              <TextField
+              <NumericField
                 value={deal.rate}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value)
-                  if (!isNaN(val)) handleListFieldChange(index, 'rate', val)
+                onChange={(v) => {
+                  if (v !== '') handleListFieldChange(index, 'rate', v)
                 }}
-                type="number"
                 size="small"
-                inputProps={{ min: 0, max: 15, step: 0.01 }}
                 sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' } }}
                 onClick={(e) => e.stopPropagation()}
               />
-              <TextField
+              <NumericField
                 value={deal.start_month}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10)
-                  if (!isNaN(val)) handleListFieldChange(index, 'start_month', val)
+                onChange={(v) => {
+                  if (v !== '') handleListFieldChange(index, 'start_month', v)
                 }}
-                type="number"
+                integer
                 size="small"
-                inputProps={{ min: 0, max: termMonths - 1 }}
                 sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' } }}
                 onClick={(e) => e.stopPropagation()}
               />
-              <TextField
+              <NumericField
                 value={deal.end_month}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10)
-                  if (!isNaN(val)) handleListFieldChange(index, 'end_month', val)
+                onChange={(v) => {
+                  if (v !== '') handleListFieldChange(index, 'end_month', v)
                 }}
-                type="number"
+                integer
                 size="small"
-                inputProps={{ min: 1, max: termMonths }}
                 sx={{ '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' } }}
                 onClick={(e) => e.stopPropagation()}
               />
@@ -523,12 +516,10 @@ export const DealTimeline: React.FC<DealTimelineProps> = ({
         <DialogTitle>Add Deal</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
+            <NumericField
               label="Interest Rate (%)"
-              type="number"
               value={newDealRate}
-              onChange={(e) => setNewDealRate(parseFloat(e.target.value) || 0)}
-              inputProps={{ min: 0, max: 15, step: 0.01 }}
+              onChange={(v) => setNewDealRate(v === '' ? 0 : v)}
               fullWidth
               size="small"
             />
