@@ -75,14 +75,13 @@ export const PaymentScheduleChart: React.FC<PaymentScheduleChartProps> = ({
           ...commonChartOptions.scales.x,
           type: 'time',
           time: {
-            unit: 'month',
+            unit: 'quarter',
             displayFormats: {
-              month: 'MMM yyyy',
+              quarter: 'MMM yyyy',
             },
           },
           ticks: {
             ...commonChartOptions.scales.x.ticks,
-            maxTicksLimit: 12,
           },
         },
         xAge: startingAge !== undefined ? {

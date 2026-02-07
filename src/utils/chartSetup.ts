@@ -95,6 +95,8 @@ export const commonChartOptions = {
         font: {
           size: 11,
         },
+        maxRotation: 45,
+        minRotation: 45,
       },
     },
     y: {

@@ -20,9 +20,7 @@ import {
   Savings,
   Settings,
   CalendarToday,
-  PaymentOutlined,
   Share,
-  TouchApp,
   Add,
   Delete,
 } from '@mui/icons-material'
@@ -216,8 +214,8 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
         </Box>
 
         <Box component="form" sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Top Row: Start Date + Mortgage Details + Savings Details */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr 1.5fr' }, gap: 2 }}>
+          {/* Top Row: Start Date + Mortgage Details */}
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 3fr' }, gap: 2 }}>
             {/* Start Date & Birth Year */}
             <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(76, 175, 80, 0.02)' }}>
               <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
@@ -351,231 +349,198 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                 )}
               />
             </Paper>
+          </Box>
 
-            {/* Savings Accounts */}
-            <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(46, 125, 50, 0.02)' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-                <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 600 }}>
-                  <Savings color="success" fontSize="small" />
-                  Savings Accounts
+          {/* Savings Accounts - full width row */}
+          <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(46, 125, 50, 0.02)' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+              <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 600 }}>
+                <Savings color="success" fontSize="small" />
+                Savings Accounts
+              </Typography>
+              <Tooltip title="Add Account">
+                <IconButton
+                  size="small"
+                  onClick={handleAddAccount}
+                  color="success"
+                  disabled={accountFields.length >= 10}
+                >
+                  <Add fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+
+            {accountFields.length === 0 ? (
+              <Box sx={{
+                p: 2,
+                textAlign: 'center',
+                backgroundColor: 'rgba(0,0,0,0.02)',
+                borderRadius: 1,
+                border: '1px dashed rgba(0,0,0,0.2)'
+              }}>
+                <Typography variant="body2" color="text.secondary">
+                  No savings accounts. Click + to add one.
                 </Typography>
-                <Tooltip title="Add Account">
-                  <IconButton
-                    size="small"
-                    onClick={handleAddAccount}
-                    color="success"
-                    disabled={accountFields.length >= 10}
+              </Box>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                {accountFields.map((field, index) => (
+                  <Box
+                    key={field.id}
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: '1.5fr 1fr 1fr 0.8fr auto' },
+                      gap: 1,
+                      alignItems: 'start',
+                      p: 1,
+                      backgroundColor: 'rgba(255,255,255,0.5)',
+                      borderRadius: 1,
+                      border: '1px solid rgba(0,0,0,0.08)'
+                    }}
                   >
-                    <Add fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-
-              {accountFields.length === 0 ? (
-                <Box sx={{
-                  p: 2,
-                  textAlign: 'center',
-                  backgroundColor: 'rgba(0,0,0,0.02)',
-                  borderRadius: 1,
-                  border: '1px dashed rgba(0,0,0,0.2)'
-                }}>
-                  <Typography variant="body2" color="text.secondary">
-                    No savings accounts. Click + to add one.
-                  </Typography>
-                </Box>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {accountFields.map((field, index) => (
-                    <Box
-                      key={field.id}
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: '1.5fr 1fr 1fr 0.8fr auto' },
-                        gap: 1,
-                        alignItems: 'start',
-                        p: 1,
-                        backgroundColor: 'rgba(255,255,255,0.5)',
-                        borderRadius: 1,
-                        border: '1px solid rgba(0,0,0,0.08)'
-                      }}
-                    >
-                      <Controller
-                        name={`savings_accounts.${index}.name`}
-                        control={control}
-                        render={({ field: inputField }) => (
-                          <TextField
-                            {...inputField}
-                            label="Name"
-                            error={!!errors.savings_accounts?.[index]?.name}
-                            helperText={errors.savings_accounts?.[index]?.name?.message}
-                            fullWidth
-                            placeholder="ISA"
-                            size="small"
-                          />
-                        )}
-                      />
-
-                      <Controller
-                        name={`savings_accounts.${index}.initial_balance`}
-                        control={control}
-                        render={({ field: inputField }) => (
-                          <NumericField
-                            value={inputField.value}
-                            onChange={(v) => inputField.onChange(v)}
-                            label="Initial (£)"
-                            error={!!errors.savings_accounts?.[index]?.initial_balance}
-                            helperText={errors.savings_accounts?.[index]?.initial_balance?.message}
-                            fullWidth
-                            placeholder="50000"
-                            size="small"
-                          />
-                        )}
-                      />
-
-                      <Controller
-                        name={`savings_accounts.${index}.monthly_contribution`}
-                        control={control}
-                        render={({ field: inputField }) => (
-                          <NumericField
-                            value={inputField.value}
-                            onChange={(v) => inputField.onChange(v)}
-                            label="Monthly (£)"
-                            error={!!errors.savings_accounts?.[index]?.monthly_contribution}
-                            helperText={errors.savings_accounts?.[index]?.monthly_contribution?.message}
-                            fullWidth
-                            placeholder="500"
-                            size="small"
-                          />
-                        )}
-                      />
-
-                      <Controller
-                        name={`savings_accounts.${index}.rate`}
-                        control={control}
-                        render={({ field: inputField }) => (
-                          <NumericField
-                            value={inputField.value}
-                            onChange={(v) => inputField.onChange(v)}
-                            label="Rate (%)"
-                            error={!!errors.savings_accounts?.[index]?.rate}
-                            helperText={errors.savings_accounts?.[index]?.rate?.message}
-                            fullWidth
-                            placeholder="4.0"
-                            size="small"
-                          />
-                        )}
-                      />
-
-                      <Tooltip title="Remove Account">
-                        <IconButton
+                    <Controller
+                      name={`savings_accounts.${index}.name`}
+                      control={control}
+                      render={({ field: inputField }) => (
+                        <TextField
+                          {...inputField}
+                          label="Name"
+                          error={!!errors.savings_accounts?.[index]?.name}
+                          helperText={errors.savings_accounts?.[index]?.name?.message}
+                          fullWidth
+                          placeholder="ISA"
                           size="small"
-                          onClick={() => removeAccount(index)}
-                          color="error"
-                          sx={{ mt: 0.5 }}
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </Paper>
-          </Box>
-
-          {/* Bottom Row: Simulation Settings + Overpayments Note */}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' }, gap: 2 }}>
-            {/* Simulation Parameters */}
-            <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(156, 39, 176, 0.02)' }}>
-              <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
-                <Settings color="secondary" fontSize="small" />
-                Simulation Settings
-              </Typography>
-
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5 }}>
-                <Controller
-                  name="typical_payment"
-                  control={control}
-                  render={({ field }) => (
-                    <NumericField
-                      value={field.value}
-                      onChange={(v) => field.onChange(v)}
-                      label="Monthly Payment (£)"
-                      error={!!errors.typical_payment}
-                      helperText={errors.typical_payment?.message}
-                      fullWidth
-                      placeholder="878"
-                      size="small"
+                        />
+                      )}
                     />
-                  )}
-                />
 
-                <Controller
-                  name="asset_value"
-                  control={control}
-                  render={({ field }) => (
-                    <NumericField
-                      value={field.value}
-                      onChange={(v) => field.onChange(v)}
-                      label="Property Value (£)"
-                      error={!!errors.asset_value}
-                      helperText={errors.asset_value?.message}
-                      fullWidth
-                      placeholder="360000"
-                      size="small"
+                    <Controller
+                      name={`savings_accounts.${index}.initial_balance`}
+                      control={control}
+                      render={({ field: inputField }) => (
+                        <NumericField
+                          value={inputField.value}
+                          onChange={(v) => inputField.onChange(v)}
+                          label="Initial (£)"
+                          error={!!errors.savings_accounts?.[index]?.initial_balance}
+                          helperText={errors.savings_accounts?.[index]?.initial_balance?.message}
+                          fullWidth
+                          placeholder="50000"
+                          size="small"
+                        />
+                      )}
                     />
-                  )}
-                />
 
-                <Controller
-                  name="show_years_after_payoff"
-                  control={control}
-                  render={({ field }) => (
-                    <NumericField
-                      value={field.value}
-                      onChange={(v) => field.onChange(v)}
-                      label="Years After Payoff"
-                      error={!!errors.show_years_after_payoff}
-                      helperText={errors.show_years_after_payoff?.message}
-                      fullWidth
-                      placeholder="5"
-                      size="small"
+                    <Controller
+                      name={`savings_accounts.${index}.monthly_contribution`}
+                      control={control}
+                      render={({ field: inputField }) => (
+                        <NumericField
+                          value={inputField.value}
+                          onChange={(v) => inputField.onChange(v)}
+                          label="Monthly (£)"
+                          error={!!errors.savings_accounts?.[index]?.monthly_contribution}
+                          helperText={errors.savings_accounts?.[index]?.monthly_contribution?.message}
+                          fullWidth
+                          placeholder="500"
+                          size="small"
+                        />
+                      )}
                     />
-                  )}
-                />
+
+                    <Controller
+                      name={`savings_accounts.${index}.rate`}
+                      control={control}
+                      render={({ field: inputField }) => (
+                        <NumericField
+                          value={inputField.value}
+                          onChange={(v) => inputField.onChange(v)}
+                          label="Rate (%)"
+                          error={!!errors.savings_accounts?.[index]?.rate}
+                          helperText={errors.savings_accounts?.[index]?.rate?.message}
+                          fullWidth
+                          placeholder="4.0"
+                          size="small"
+                        />
+                      )}
+                    />
+
+                    <Tooltip title="Remove Account">
+                      <IconButton
+                        size="small"
+                        onClick={() => removeAccount(index)}
+                        color="error"
+                        sx={{ mt: 0.5 }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                ))}
               </Box>
-            </Paper>
+            )}
+          </Paper>
 
-            {/* Overpayments Note */}
-            <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(237, 108, 2, 0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
-                <PaymentOutlined color="warning" fontSize="small" />
-                Overpayments
-              </Typography>
+          {/* Simulation Settings - full width */}
+          <Paper elevation={1} sx={{ p: 2, backgroundColor: 'rgba(156, 39, 176, 0.02)' }}>
+            <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, fontWeight: 600 }}>
+              <Settings color="secondary" fontSize="small" />
+              Simulation Settings
+            </Typography>
 
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  p: 1.5,
-                  backgroundColor: 'rgba(255, 152, 0, 0.08)',
-                  borderRadius: 1,
-                  border: '1px dashed rgba(255, 152, 0, 0.4)',
-                }}
-              >
-                <TouchApp sx={{ fontSize: 24, color: 'warning.main' }} />
-                <Box>
-                  <Typography variant="body2" fontWeight="medium" color="text.primary">
-                    Click on the Balance Chart
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Add overpayments by clicking on the chart below. Drag to adjust timing.
-                  </Typography>
-                </Box>
-              </Box>
-            </Paper>
-          </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+              <Controller
+                name="typical_payment"
+                control={control}
+                render={({ field }) => (
+                  <NumericField
+                    value={field.value}
+                    onChange={(v) => field.onChange(v)}
+                    label="Monthly Payment (£)"
+                    error={!!errors.typical_payment}
+                    helperText={errors.typical_payment?.message}
+                    fullWidth
+                    placeholder="878"
+                    size="small"
+                  />
+                )}
+              />
+
+              <Controller
+                name="asset_value"
+                control={control}
+                render={({ field }) => (
+                  <NumericField
+                    value={field.value}
+                    onChange={(v) => field.onChange(v)}
+                    label="Property Value (£)"
+                    error={!!errors.asset_value}
+                    helperText={errors.asset_value?.message}
+                    fullWidth
+                    placeholder="360000"
+                    size="small"
+                  />
+                )}
+              />
+
+              <Controller
+                name="show_years_after_payoff"
+                control={control}
+                render={({ field }) => (
+                  <NumericField
+                    value={field.value}
+                    onChange={(v) => field.onChange(v)}
+                    label="Years After Payoff"
+                    error={!!errors.show_years_after_payoff}
+                    helperText={errors.show_years_after_payoff?.message}
+                    fullWidth
+                    placeholder="5"
+                    size="small"
+                  />
+                )}
+              />
+            </Box>
+          </Paper>
         </Box>
       </CardContent>
 
