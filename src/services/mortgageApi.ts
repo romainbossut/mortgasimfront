@@ -139,6 +139,7 @@ export const transformFormDataToRequest = (formData: MortgageFormData): Simulati
         rate: acc.rate,
         monthly_contribution: acc.monthly_contribution,
         initial_balance: acc.initial_balance,
+        draw_for_repayment: acc.draw_for_repayment,
       })),
     },
     simulation: {

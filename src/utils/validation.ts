@@ -61,6 +61,7 @@ export const mortgageFormSchema = z.object({
       rate: z.number().min(0, 'Rate cannot be negative').max(15, 'Rate cannot exceed 15%'),
       monthly_contribution: z.number().min(0, 'Contribution cannot be negative'),
       initial_balance: z.number().min(0, 'Initial balance cannot be negative'),
+      draw_for_repayment: z.boolean().default(true),
     }))
     .min(0, 'At least one account can be added')
     .max(10, 'Maximum 10 accounts allowed')
@@ -68,7 +69,8 @@ export const mortgageFormSchema = z.object({
       name: 'Savings',
       rate: 4.3,
       monthly_contribution: 2500,
-      initial_balance: 170000
+      initial_balance: 170000,
+      draw_for_repayment: true,
     }]),
 
   // Simulation parameters
@@ -126,6 +128,7 @@ export type SavingsAccountFormData = {
   rate: number
   monthly_contribution: number
   initial_balance: number
+  draw_for_repayment: boolean
 }
 
 export type MortgageFormData = z.infer<typeof mortgageFormSchema>
@@ -150,7 +153,8 @@ export const defaultFormValues: MortgageFormData = {
     name: 'Savings',
     rate: 4.3,
     monthly_contribution: 2500,
-    initial_balance: 170000
+    initial_balance: 170000,
+    draw_for_repayment: true,
   }],
   typical_payment: 878,
   asset_value: 360000,
@@ -236,7 +240,7 @@ export const getMonthName = (monthNumber: number): string => {
 
 // Local storage utilities with validation
 const STORAGE_KEY = 'mortgasim_form_data'
-const STORAGE_VERSION = '3.0.0' // Updated for multi-deal + multi-account support
+const STORAGE_VERSION = '4.0.0' // Updated for draw_for_repayment support
 
 interface StoredFormData {
   version: string

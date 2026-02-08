@@ -13,6 +13,7 @@ import {
   Alert,
   IconButton,
   Tooltip,
+  Checkbox,
 } from '@mui/material'
 import {
   Calculate,
@@ -102,6 +103,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
       rate: 4.0,
       monthly_contribution: 0,
       initial_balance: 0,
+      draw_for_repayment: true,
     })
   }
 
@@ -389,7 +391,7 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                     key={field.id}
                     sx={{
                       display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', sm: '1.5fr 1fr 1fr 0.8fr auto' },
+                      gridTemplateColumns: { xs: '1fr', sm: '1.5fr 1fr 1fr 0.8fr auto auto' },
                       gap: 1,
                       alignItems: 'start',
                       p: 1,
@@ -462,6 +464,21 @@ export const MortgageForm: React.FC<MortgageFormProps> = ({
                           placeholder="4.0"
                           size="small"
                         />
+                      )}
+                    />
+
+                    <Controller
+                      name={`savings_accounts.${index}.draw_for_repayment`}
+                      control={control}
+                      render={({ field: inputField }) => (
+                        <Tooltip title="Draw for repayment">
+                          <Checkbox
+                            checked={inputField.value ?? true}
+                            onChange={(e) => inputField.onChange(e.target.checked)}
+                            size="small"
+                            sx={{ mt: 0.5 }}
+                          />
+                        </Tooltip>
                       )}
                     />
 

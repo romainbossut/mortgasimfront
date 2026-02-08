@@ -21,6 +21,7 @@ export interface SavingsAccount {
   rate: number // Annual interest rate as percentage
   monthly_contribution: number // Monthly contribution in pounds
   initial_balance: number // Initial balance in pounds
+  draw_for_repayment: boolean // Whether balance can be used for mortgage overpayments
 }
 
 export interface SavingsParameters {
