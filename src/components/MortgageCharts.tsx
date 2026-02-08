@@ -269,6 +269,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
         savingsBalance: [],
         netWorth: [],
         monthlyPayments: [],
+        monthlySavings: [],
         ltv: [],
         maxPeriod: 0,
       }
