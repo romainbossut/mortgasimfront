@@ -19,7 +19,7 @@ import '../utils/chartSetup'
 import { getAccountColor, yearsToDate, formatDateLabel } from '../utils/chartSetup'
 
 // Import Chart.js components
-import { InteractiveBalanceChart, NetWorthChart, PaymentScheduleChart, LTVChart, PerAccountSavingsChart } from './charts'
+import { InteractiveBalanceChart, NetWorthChart, PaymentScheduleChart, LTVChart, PerAccountSavingsChart, MonthlySavingsChart } from './charts'
 
 interface MortgageChartsProps {
   chartData: ChartData
@@ -298,6 +298,7 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
       savingsBalance: sampledIndices.map((i) => chartData.savings_balance[i]),
       netWorth: sampledIndices.map((i) => chartData.net_worth[i]),
       monthlyPayments: sampledIndices.map((i) => chartData.monthly_payments[i]),
+      monthlySavings: sampledIndices.map((i) => chartData.monthly_savings_data[i]),
       ltv: mortgageBalances.map((balance) => assetValue > 0 ? (balance / assetValue) * 100 : 0),
       maxPeriod: Math.round(chartData.years[chartData.years.length - 1] * 12),
     }
@@ -625,6 +626,23 @@ export const MortgageCharts: React.FC<MortgageChartsProps> = ({
             <PaymentScheduleChart
               years={processedData.years}
               monthlyPayments={processedData.monthlyPayments}
+              startDate={startDate}
+              birthYear={birthYear}
+            />
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Monthly Savings Chart */}
+      <Card elevation={3}>
+        <CardContent>
+          <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+            Monthly Savings Contributions
+          </Typography>
+          <Box sx={{ height: 350 }}>
+            <MonthlySavingsChart
+              years={processedData.years}
+              monthlySavings={processedData.monthlySavings}
               startDate={startDate}
               birthYear={birthYear}
             />
