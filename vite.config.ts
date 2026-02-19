@@ -46,7 +46,8 @@ export default defineConfig({
           
           // Analytics and utilities
           'vendor-utils': [
-            '@vercel/analytics'
+            '@vercel/analytics',
+            '@vercel/speed-insights'
           ]
         }
       }
